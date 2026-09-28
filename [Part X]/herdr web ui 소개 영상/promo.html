@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>herdr web ui — 15s promo</title>
+<style>
+@font-face { font-family: "Pretendard"; font-weight: 500; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-Medium.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 600; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 700; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-Bold.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 800; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-ExtraBold.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 900; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-Black.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 500; src: url("node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-weight: 700; src: url("node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-700-normal.woff2") format("woff2"); }
+
+/* 브랜드 토큰 (herdr web ui DESIGN.md) */
+:root {
+  --bg: #12100e; --panel: #181613; --elev: #211e1a; --line: #2d2924; --line-strong: #3e3830;
+  --text: #d8d0c3; --dim: #9b9183; --strong: #f2ebdf;
+  --amber: #f0a830; --amber-hi: #f6bb55; --amber-ink: #1b1407;
+  --working: #6cb8d6; --blocked: #ff7b70; --done: #93c36b;
+  --ui: "Pretendard", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: #0c0a08; }
+body { font-family: var(--ui); color: var(--strong); -webkit-font-smoothing: antialiased; }
+#stage { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
+
+/* ---------- 배경 ---------- */
+#bg { position: absolute; inset: -80px; }
+#bg .base { position: absolute; inset: 0; background: radial-gradient(1400px 900px at 50% 45%, #1b1713 0%, #110f0d 55%, #0a0907 100%); }
+#bg .glowA { position: absolute; width: 1400px; height: 1400px; left: -300px; top: -620px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(240,168,48,0.16), rgba(240,168,48,0.05) 40%, transparent 68%); }
+#bg .glowB { position: absolute; width: 1300px; height: 1300px; right: -420px; bottom: -700px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(246,187,85,0.10), transparent 65%); }
+#bg .dots { position: absolute; inset: 0; opacity: 0.35;
+  background-image: radial-gradient(rgba(242,235,223,0.07) 1.2px, transparent 1.6px); background-size: 36px 36px;
+  mask-image: radial-gradient(1100px 700px at 50% 50%, #000 20%, transparent 85%); }
+
+/* ---------- 카메라 ---------- */
+#cam { position: absolute; inset: 0; transform-origin: 50% 50%; }
+#rig { position: absolute; inset: 0; }
+.scene { position: absolute; inset: 0; visibility: hidden; }
+.p3d { perspective: 2200px; perspective-origin: 50% 45%; }
+
+/* ---------- 공통 타이포 ---------- */
+.line { display: block; overflow: hidden; padding: 0.04em 0.02em 0.12em; margin-bottom: -0.1em; }
+.line > span { display: inline-block; will-change: transform; }
+.accent { color: var(--amber); }
+.mono { font-family: var(--mono); }
+.kicker { font-family: var(--mono); font-size: 26px; font-weight: 500; letter-spacing: 0.06em; color: var(--dim); text-transform: uppercase; }
+.rail { position: absolute; height: 6px; border-radius: 3px; background: var(--amber); transform-origin: left center;
+  box-shadow: 0 0 18px rgba(240,168,48,0.65); }
+
+/* 3D 창 */
+.win { position: absolute; border-radius: 16px; overflow: hidden; transform-style: preserve-3d;
+  box-shadow: 0 60px 120px rgba(0,0,0,0.65), 0 0 0 1px rgba(255,255,255,0.07), inset 0 1px 0 rgba(255,255,255,0.08); background: var(--panel); }
+.win img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.sheen { position: absolute; inset: -20%; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(115deg, transparent 38%, rgba(255,240,215,0.10) 48%, rgba(255,240,215,0.02) 55%, transparent 62%); }
+
+/* 폰 */
+.phone { position: absolute; border-radius: 62px; padding: 13px; transform-style: preserve-3d;
+  background: linear-gradient(145deg, #3a342c, #15120f 38%, #0b0a08 60%, #2c2721);
+  box-shadow: 0 50px 100px rgba(0,0,0,0.7), inset 0 0 0 2px rgba(255,255,255,0.06), 0 0 0 1px rgba(0,0,0,0.9); }
+.phone .screen { position: relative; width: 100%; height: 100%; border-radius: 50px; overflow: hidden; background: #000; }
+.phone .screen img { width: 100%; height: 100%; display: block; }
+.phone .island { position: absolute; top: 24px; left: 50%; width: 30%; height: 30px; margin-left: -15%; border-radius: 16px; background: #000; }
+
+/* ---------- S1 인트로 ---------- */
+#s1glow { position: absolute; left: 50%; top: 50%; width: 1500px; height: 900px; margin: -450px 0 0 -750px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(240,168,48,0.20), rgba(240,168,48,0.06) 45%, transparent 75%); }
+#s1line { position: absolute; left: 50%; top: 50%; width: 1500px; height: 3px; margin: -1px 0 0 -750px; background: var(--amber);
+  box-shadow: 0 0 24px 4px rgba(240,168,48,0.7); }
+#s1text { position: absolute; left: 0; right: 0; top: 50%; margin-top: -92px; text-align: center; white-space: nowrap;
+  font-size: 176px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+#s1text .ch { display: none; }
+#s1cursor { display: inline-block; width: 0.46em; height: 0.8em; margin-left: 0.06em; vertical-align: -0.06em; background: var(--amber);
+  box-shadow: 0 0 30px rgba(240,168,48,0.8), 0 0 80px rgba(240,168,48,0.35); }
+#s1scan { position: absolute; inset: 0; opacity: 0.35;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0 2px, transparent 2px 5px); }
+
+/* ---------- S2 채팅 ---------- */
+#s2scrim { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,12,10,0.96) 0%, rgba(14,12,10,0.75) 34%, transparent 58%); }
+#s2win { left: 760px; top: 150px; width: 1260px; height: 821px; }
+#s2words { position: absolute; left: 120px; top: 318px; font-size: 104px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
+#s2rail { left: 124px; top: 668px; width: 590px; }
+#s2kick { position: absolute; left: 124px; top: 262px; }
+#s2todo { position: absolute; left: 1010px; top: 700px; width: 877px; height: 165px; border-radius: 12px; overflow: hidden;
+  background: url("assets/chat-todo.jpg") no-repeat; background-size: 1536px 960px; background-position: -501px -678px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(240,168,48,0.35), 0 0 40px rgba(240,168,48,0.18); }
+
+/* ---------- S3 승인 ---------- */
+#s3words { position: absolute; left: 120px; top: 360px; font-size: 118px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
+#s3kick { position: absolute; left: 124px; top: 300px; }
+#s3phone { left: 1060px; top: 66px; width: 452px; height: 948px; }
+#tapLayer { position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+.ripple { position: absolute; width: 90px; height: 90px; margin: -45px 0 0 -45px; border-radius: 50%; border: 4px solid var(--amber-hi); }
+#finger { position: absolute; width: 74px; height: 74px; margin: -37px 0 0 -37px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,0.75), rgba(255,255,255,0.25) 60%, transparent 72%); }
+#yesGlow { position: absolute; border-radius: 10px; box-shadow: 0 0 0 3px var(--amber-hi), 0 0 40px 8px rgba(240,168,48,0.55); }
+.spark { position: absolute; width: 5px; height: 26px; margin: -13px 0 0 -2.5px; border-radius: 3px; background: var(--amber-hi); transform-origin: 50% 50%; }
+
+/* ---------- S4 터미널 ---------- */
+#s4 { clip-path: inset(0 calc((1 - var(--wipe, 1)) * 100%) 0 0);
+  background: radial-gradient(1300px 900px at 68% 38%, #1f1a15 0%, #13110e 60%, #0d0b09 100%); }
+#s4win { left: 470px; top: 80px; width: 1500px; height: 977px; }
+#termMask { position: absolute; left: 333px; right: 0; bottom: 0; background: #181613; }
+#termCursor { position: absolute; width: 8px; height: 17px; background: var(--amber); box-shadow: 0 0 10px rgba(240,168,48,0.9); }
+#s4scrim { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(14,12,10,0.96) 0%, rgba(14,12,10,0.82) 22%, transparent 34%),
+  linear-gradient(0deg, rgba(14,12,10,0.9) 0%, transparent 30%); }
+#s4words { position: absolute; left: 120px; top: 640px; font-size: 104px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
+#s4sub { position: absolute; left: 124px; top: 878px; font-family: var(--mono); font-size: 34px; font-weight: 500; color: var(--amber); }
+#s4sub .dollar { color: var(--dim); margin-right: 0.5em; }
+#s4kick { position: absolute; left: 124px; top: 588px; }
+#wipeBar { position: absolute; top: -40px; bottom: -40px; width: 140px; margin-left: -70px; background: var(--amber); transform: skewX(-14deg);
+  box-shadow: 0 0 60px 20px rgba(240,168,48,0.45); visibility: hidden; }
+
+/* ---------- S5 폰 ---------- */
+#s5words { position: absolute; left: 120px; top: 380px; font-size: 118px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
+#s5kick { position: absolute; left: 124px; top: 320px; }
+#s5sub { position: absolute; left: 124px; top: 646px; font-family: var(--mono); font-size: 30px; color: var(--dim); }
+#phones { position: absolute; inset: 0; transform-style: preserve-3d; }
+#phones .phone { width: 320px; height: 671px; border-radius: 46px; padding: 10px; }
+#phones .phone .screen { border-radius: 36px; }
+#phones .phone .island { top: 16px; height: 20px; border-radius: 11px; }
+#toast { position: absolute; right: 70px; top: 44px; width: 620px; padding: 22px 26px; border-radius: 30px; display: flex; gap: 20px; align-items: center;
+  background: rgba(40,35,30,0.88); box-shadow: 0 30px 60px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.08); backdrop-filter: blur(20px); }
+#toast img { width: 76px; height: 76px; border-radius: 18px; }
+#toast .app { font-size: 22px; font-weight: 600; color: var(--dim); display: flex; justify-content: space-between; }
+#toast .ttl { font-size: 30px; font-weight: 700; color: var(--strong); margin-top: 2px; }
+#toast .msg { font-size: 26px; font-weight: 500; color: var(--text); margin-top: 2px; }
+#toast .msg b { color: var(--blocked); font-weight: 700; }
+
+/* ---------- S6 펀치 ---------- */
+.punch { position: absolute; font-size: 214px; font-weight: 900; letter-spacing: -0.045em; line-height: 1; white-space: nowrap; }
+#n1 { left: 120px; top: 360px; }
+#n2 { right: 120px; top: 480px; text-align: right; }
+#n3 { left: 0; right: 0; top: 420px; text-align: center; font-size: 250px; }
+.agent { position: absolute; left: 0; right: 0; top: 470px; text-align: center; font-family: var(--mono); font-size: 128px; font-weight: 700; letter-spacing: -0.02em; }
+.agent i { display: inline-block; width: 0.34em; height: 0.34em; border-radius: 50%; margin-right: 0.3em; vertical-align: 0.1em; }
+#s6rail { left: 160px; top: 537px; width: 1600px; }
+
+/* ---------- S7 로고 ---------- */
+#logoGlow { position: absolute; width: 1200px; height: 1200px; border-radius: 50%; left: 50%; top: 50%; margin: -600px 0 0 -600px;
+  background: radial-gradient(closest-side, rgba(240,168,48,0.26), rgba(240,168,48,0.07) 50%, transparent 78%); }
+#logoWrap { position: absolute; left: 700px; top: 250px; width: 520px; height: 520px; }
+#logo { width: 100%; height: 100%; overflow: visible; }
+#wordmark { position: absolute; left: 748px; top: 372px; font-size: 136px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; white-space: nowrap; }
+#wordmark .line { padding-bottom: 0.14em; }
+#tagline { position: absolute; left: 752px; top: 540px; font-size: 44px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; white-space: nowrap; }
+#url { position: absolute; left: 752px; top: 622px; font-family: var(--mono); font-size: 38px; font-weight: 700; color: var(--amber); white-space: nowrap; }
+#urlCursor { display: inline-block; width: 0.55em; height: 0.95em; margin-left: 0.12em; vertical-align: -0.16em; background: var(--amber);
+  box-shadow: 0 0 16px rgba(240,168,48,0.8); }
+#urlRail { left: 752px; top: 690px; width: 690px; height: 4px; }
+#streak { position: absolute; left: -200px; right: -200px; top: 50%; height: 4px; margin-top: -2px;
+  background: linear-gradient(90deg, transparent, rgba(255,214,150,0.0) 15%, rgba(255,226,180,0.95) 50%, rgba(255,214,150,0.0) 85%, transparent);
+  filter: blur(1.5px); box-shadow: 0 0 40px 10px rgba(240,168,48,0.35); }
+.mote { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: rgba(246,187,85,0.9); box-shadow: 0 0 10px rgba(246,187,85,0.9); }
+
+/* ---------- 효과 레이어 ---------- */
+#flash { position: absolute; inset: 0; background: radial-gradient(1200px 800px at 50% 50%, rgba(255,236,200,1), rgba(240,168,48,0.6) 60%, rgba(240,168,48,0.2));
+  mix-blend-mode: screen; opacity: 0; pointer-events: none; }
+#grain { position: absolute; inset: -128px; background: url("assets/grain.png"); background-size: 256px 256px; opacity: 0.10; mix-blend-mode: overlay; pointer-events: none; }
+#vignette { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(1500px 950px at 50% 50%, transparent 55%, rgba(0,0,0,0.55) 100%); }
+#black { position: absolute; inset: 0; background: #070605; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"><div class="base"></div><div class="glowA"></div><div class="glowB"></div><div class="dots"></div></div>
+
+  <div id="cam"><div id="rig">
+
+    <!-- 마디 1 : 콜드 오픈 -->
+    <section class="scene" id="s1">
+      <div id="s1glow"></div>
+      <div id="s1line"></div>
+      <div id="s1text"></div>
+      <div id="s1scan"></div>
+    </section>
+
+    <!-- 마디 2 : 채팅 -->
+    <section class="scene p3d" id="s2">
+      <div class="win" id="s2win"><img src="assets/desktop-chat.jpg" alt=""><div class="sheen"></div></div>
+      <div id="s2todo"></div>
+      <div id="s2scrim"></div>
+      <div class="kicker" id="s2kick">Chat · Claude Code, Codex</div>
+      <div id="s2words">
+        <span class="line"><span>Your agents,</span></span>
+        <span class="line"><span>in plain</span></span>
+        <span class="line"><span class="accent">conversation.</span></span>
+      </div>
+      <div class="rail" id="s2rail"></div>
+    </section>
+
+    <!-- 마디 3 : 승인 -->
+    <section class="scene p3d" id="s3">
+      <div class="phone" id="s3phone">
+        <div class="screen"><img src="assets/phone-approve.png" alt="">
+          <div id="tapLayer"><div id="yesGlow"></div><div class="ripple"></div><div class="ripple"></div><div class="ripple"></div><div id="finger"></div></div>
+        </div>
+        <div class="island"></div>
+      </div>
+      <div class="kicker" id="s3kick">Approvals · Questions · Plans</div>
+      <div id="s3words">
+        <span class="line"><span>Approve</span></span>
+        <span class="line"><span>with a <span class="accent">tap.</span></span></span>
+      </div>
+    </section>
+
+    <!-- 마디 4 : 터미널 -->
+    <section class="scene p3d" id="s4">
+      <div class="win" id="s4win"><img src="assets/desktop-terminal.jpg" alt=""><div id="termMask"></div><div id="termCursor"></div><div class="sheen"></div></div>
+      <div id="s4scrim"></div>
+      <div class="kicker" id="s4kick">Full-screen TUIs · raw keys</div>
+      <div id="s4words">
+        <span class="line"><span>The real</span></span>
+        <span class="line"><span>terminal.</span></span>
+      </div>
+      <div id="s4sub"><span class="dollar">$</span>herdr terminal attach</div>
+    </section>
+
+    <!-- 마디 5 : 폰 -->
+    <section class="scene p3d" id="s5">
+      <div id="phones">
+        <div class="phone" id="ph1"><div class="screen"><img src="assets/phone-sessions.png" alt=""></div><div class="island"></div></div>
+        <div class="phone" id="ph2"><div class="screen"><img src="assets/phone-chat.png" alt=""></div><div class="island"></div></div>
+        <div class="phone" id="ph3"><div class="screen"><img src="assets/phone-approve.png" alt=""></div><div class="island"></div></div>
+        <div class="phone" id="ph4"><div class="screen"><img src="assets/phone-terminal.png" alt=""></div><div class="island"></div></div>
+      </div>
+      <div class="kicker" id="s5kick">Installable PWA</div>
+      <div id="s5words">
+        <span class="line"><span>In your</span></span>
+        <span class="line"><span class="accent">pocket.</span></span>
+      </div>
+      <div id="s5sub">push alerts · terminal key bar</div>
+      <div id="toast">
+        <img src="assets/icon-192.png" alt="">
+        <div style="flex:1">
+          <div class="app"><span>HERDR WEB UI</span><span>now</span></div>
+          <div class="ttl">Guard the export button</div>
+          <div class="msg"><b>INPUT</b> · Codex needs your answer</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 마디 6 : 펀치 -->
+    <section class="scene" id="s6">
+      <div class="punch" id="n1">No wrapper.</div>
+      <div class="punch" id="n2">No account.</div>
+      <div class="punch accent" id="n3">Yours only.</div>
+      <div class="agent" id="ag1"><i style="background:var(--working)"></i>Claude Code</div>
+      <div class="agent" id="ag2"><i style="background:var(--blocked)"></i>Codex</div>
+      <div class="agent" id="ag3"><i style="background:var(--done)"></i>omp</div>
+      <div class="agent" id="ag4"><i style="background:var(--working)"></i>omo</div>
+      <div class="agent" id="ag5"><i style="background:var(--done)"></i>gjc</div>
+      <div class="rail" id="s6rail"></div>
+    </section>
+
+    <!-- 마디 7-8 : 로고 -->
+    <section class="scene" id="s7">
+      <div id="logoGlow"></div>
+      <div id="motes"></div>
+      <div id="logoWrap"></div>
+      <div id="wordmark"><span class="line"><span id="wm">herdr web ui</span></span></div>
+      <div id="tagline">Your agents, in plain conversation.</div>
+      <div id="url"><span id="urlText">devswha.github.io/herdr-web-ui</span><span id="urlCursor"></span></div>
+      <div class="rail" id="urlRail"></div>
+      <div id="streak"></div>
+    </section>
+
+  </div></div>
+
+  <div id="wipeBar"></div>
+  <div id="flash"></div>
+  <div id="black"></div>
+  <div id="grain"></div>
+  <div id="vignette"></div>
+</div>
+
+<script src="node_modules/gsap/dist/gsap.min.js"></script>
+<script src="promo.js"></script>
+</body>
+</html>
