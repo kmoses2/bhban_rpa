@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Intel — 15s motion piece</title>
+<style>
+@font-face { font-family: "Manrope"; font-weight: 500; src: url("node_modules/@fontsource/manrope/files/manrope-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Manrope"; font-weight: 600; src: url("node_modules/@fontsource/manrope/files/manrope-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Manrope"; font-weight: 700; src: url("node_modules/@fontsource/manrope/files/manrope-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Manrope"; font-weight: 800; src: url("node_modules/@fontsource/manrope/files/manrope-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "Intel One Mono"; font-weight: 400; src: url("node_modules/@fontsource/intel-one-mono/files/intel-one-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Intel One Mono"; font-weight: 500; src: url("node_modules/@fontsource/intel-one-mono/files/intel-one-mono-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Intel One Mono"; font-weight: 600; src: url("node_modules/@fontsource/intel-one-mono/files/intel-one-mono-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Intel One Mono"; font-weight: 700; src: url("node_modules/@fontsource/intel-one-mono/files/intel-one-mono-latin-700-normal.woff2") format("woff2"); }
+
+/* 브랜드 토큰: Intel 로고·배지에서 가져온 색 (Energy Blue #00C7FD, Classic Blue #0068B5, 로고 남색 #000F28) */
+:root {
+  --bg: #030817; --navy: #000f28; --classic: #0068b5; --energy: #00c7fd; --violet: #5b3cf5;
+  --text: #eef4ff; --dim: #8ea2c8; --faint: #4d5d80; --line: rgba(142,162,200,0.22);
+  --down: #ff5470; --steel: #4a6fa5;
+  --ui: "Manrope", system-ui, sans-serif;
+  --mono: "Intel One Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+body { font-family: var(--ui); color: var(--text); -webkit-font-smoothing: antialiased; }
+#stage { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
+
+/* ---------- 배경 ---------- */
+#bg { position: absolute; inset: -80px; }
+#bg .base { position: absolute; inset: 0; background: radial-gradient(1500px 1000px at 50% 42%, #0a1a4a 0%, #050d2c 48%, #02050f 100%); }
+#bg .glowA { position: absolute; width: 1500px; height: 1500px; left: -420px; top: -760px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,104,181,0.34), rgba(0,104,181,0.08) 42%, transparent 68%); }
+#bg .glowB { position: absolute; width: 1400px; height: 1400px; right: -460px; bottom: -760px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(91,60,245,0.26), transparent 64%); }
+#bg .grid { position: absolute; inset: 0; opacity: 0.5;
+  background-image: radial-gradient(rgba(160,185,230,0.16) 1.4px, transparent 1.8px); background-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(1100px 720px at 50% 50%, #000 15%, transparent 80%); }
+#arcWrap { position: absolute; left: 50%; top: 50%; width: 2600px; height: 1463px; margin: -731px 0 0 -1300px; opacity: 0;
+  -webkit-mask-image: radial-gradient(closest-side, transparent 22%, #000 62%); }
+#arcWrap img { width: 100%; height: 100%; display: block; }
+#redTint { position: absolute; inset: 0; opacity: 0;
+  background: radial-gradient(1400px 900px at 50% 55%, rgba(120,10,30,0.55), rgba(40,0,10,0.85)); }
+
+/* ---------- 카메라 ---------- */
+#cam { position: absolute; inset: 0; transform-origin: 50% 50%; }
+#rig { position: absolute; inset: 0; }
+.scene { position: absolute; inset: 0; visibility: hidden; }
+.p3d { perspective: 2000px; perspective-origin: 50% 46%; }
+#fx { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; }
+
+/* ---------- 공통 타이포 ---------- */
+.line { display: block; overflow: hidden; padding: 0.04em 0.02em 0.14em; margin-bottom: -0.12em; }
+.line > span { display: inline-block; will-change: transform; }
+.mono { font-family: var(--mono); }
+.kicker { font-family: var(--mono); font-size: 24px; font-weight: 600; letter-spacing: 0.14em; color: var(--energy); text-transform: uppercase; }
+.blue { color: var(--energy); }
+
+/* ---------- S1 점 → 픽셀 → 로고 ---------- */
+#s1glow { position: absolute; width: 1300px; height: 1300px; border-radius: 50%; margin: -650px 0 0 -650px; left: 960px; top: 540px;
+  background: radial-gradient(closest-side, rgba(0,199,253,0.30), rgba(0,104,181,0.10) 45%, transparent 75%); }
+#logo1 { position: absolute; left: 460px; top: 303px; width: 1000px; height: 394.3px; overflow: visible; }
+#dot { position: absolute; left: 0; top: 0; width: 71.1px; height: 71.1px; background: var(--energy);
+  box-shadow: 0 0 40px rgba(0,199,253,0.75), 0 0 120px rgba(0,199,253,0.35); }
+#s1capWrap { position: absolute; left: 0; right: 0; top: 752px; text-align: center; }
+#s1cap { display: inline-block; font-family: var(--mono); font-size: 30px; font-weight: 500;
+  letter-spacing: 0.32em; color: var(--dim); white-space: nowrap; padding-left: 0.32em; }
+#s1cap b { color: var(--text); font-weight: 600; }
+
+/* ---------- S2 제품 ---------- */
+#s2bg { position: absolute; inset: 0; background: radial-gradient(1400px 900px at 70% 60%, rgba(40,30,140,0.55), transparent 70%); }
+#s2head { position: absolute; left: 118px; top: 88px; }
+#s2head .kicker { margin-bottom: 18px; }
+#s2title { font-size: 80px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02; }
+.card { position: absolute; transform-style: preserve-3d; border-radius: 22px; overflow: hidden;
+  box-shadow: 0 50px 110px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.08); }
+.card img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.card .sheen { position: absolute; inset: -30%; pointer-events: none; mix-blend-mode: screen;
+  background: linear-gradient(115deg, transparent 40%, rgba(200,235,255,0.16) 49%, rgba(200,235,255,0.03) 55%, transparent 62%); }
+#c1 { left: 118px; top: 392px; width: 420px; height: 420px; }
+#c2 { left: 578px; top: 392px; width: 420px; height: 420px; }
+#c3 { left: 1040px; top: 380px; width: 780px; height: 439px; border-radius: 16px; }
+.clabel { position: absolute; top: 850px; white-space: nowrap; }
+.clabel b { display: block; font-size: 38px; font-weight: 800; letter-spacing: -0.02em; }
+.clabel span { display: block; margin-top: 6px; font-family: var(--mono); font-size: 22px; font-weight: 500; letter-spacing: 0.06em; color: var(--dim); }
+#l1 { left: 122px; } #l2 { left: 582px; } #l3 { left: 1044px; }
+
+/* ---------- S3 차트 (차트 좌표계 1920x1080, 카메라가 확대·이동) ---------- */
+#chart { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; }
+.gl { position: absolute; left: 330px; width: 1460px; height: 2px; background: var(--line); transform-origin: left center; }
+.gl.base { height: 3px; background: rgba(190,210,245,0.55); }
+.gy { position: absolute; left: 180px; width: 130px; text-align: right; font-family: var(--mono); font-size: 26px; font-weight: 500; color: var(--dim); }
+.col { position: absolute; bottom: 150px; width: 170px; height: 0; }
+.col .fill { position: absolute; left: 0; right: 0; bottom: 0; height: 0;
+  background: linear-gradient(to top, var(--classic), var(--energy));
+  -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 15px, transparent 15px 19px), repeating-linear-gradient(0deg, #000 0 15px, transparent 15px 19px);
+  -webkit-mask-composite: source-in; mask-composite: intersect; -webkit-mask-position: 2px 100%, 2px 100%; }
+.col .cap { position: absolute; left: -4px; right: -4px; bottom: 0; height: 5px; border-radius: 2px; background: var(--energy);
+  box-shadow: 0 0 18px rgba(0,199,253,0.7); }
+.col.neutral .fill { background: linear-gradient(to top, #203a66, #6f8fc4); }
+.col.neutral .cap { background: #9fb6e0; box-shadow: none; }
+.col.down .fill { background: linear-gradient(to top, #5a1030, var(--down)); }
+.col.down .cap { background: #ff8196; box-shadow: 0 0 18px rgba(255,84,112,0.6); }
+.col.hi .fill { background: linear-gradient(to top, var(--classic), #7fe6ff); }
+.col.hi .cap { background: #fff; box-shadow: 0 0 26px rgba(0,199,253,1), 0 0 60px rgba(0,199,253,0.6); }
+.col .val { position: absolute; left: -60px; right: -60px; text-align: center; font-family: var(--mono); font-size: 36px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.col .chg { position: absolute; left: -80px; right: -80px; text-align: center; font-size: 44px; font-weight: 800; letter-spacing: -0.02em; white-space: nowrap; }
+.col .tag { display: inline-block; padding: 7px 16px 6px; border-radius: 6px; background: var(--energy); color: var(--navy);
+  font-family: var(--mono); font-size: 24px; font-weight: 700; letter-spacing: 0.12em; white-space: nowrap; box-shadow: 0 0 30px rgba(0,199,253,0.5); }
+.col .val.bigval { font-size: 58px; left: -120px; right: -120px; }
+.col.down .val { text-shadow: 0 2px 12px rgba(3,8,23,0.9); }
+.col .ghost { position: absolute; left: 0; right: 0; border: 3px dashed rgba(255,84,112,0.75); border-bottom: none; background: repeating-linear-gradient(135deg, rgba(255,84,112,0.16) 0 8px, transparent 8px 16px); }
+.col .startline { position: absolute; left: -10px; right: -10px; height: 0; border-top: 3px dotted rgba(190,210,245,0.7); }
+.date { position: absolute; top: 950px; width: 260px; text-align: center; font-family: var(--mono); font-size: 24px; font-weight: 600; letter-spacing: 0.08em; color: var(--dim); white-space: nowrap; }
+.big { position: absolute; font-size: 150px; font-weight: 800; letter-spacing: -0.05em; line-height: 1; white-space: nowrap; }
+.bigsub { position: absolute; font-family: var(--mono); font-size: 26px; font-weight: 600; letter-spacing: 0.06em; color: var(--text); white-space: nowrap; }
+#ceil { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+#ceilLabel { position: absolute; left: 340px; top: 540px; font-family: var(--mono); font-size: 22px; font-weight: 600; letter-spacing: 0.08em; color: #c9d6f2; white-space: nowrap; }
+#ceilLabel b { color: #fff; }
+
+#hud { position: absolute; left: 92px; bottom: 34px; display: flex; align-items: center; gap: 16px; padding: 12px 22px 12px 18px; border-radius: 10px;
+  background: rgba(3,8,23,0.72); box-shadow: inset 0 0 0 1px rgba(142,162,200,0.22); }
+#hud i { width: 18px; height: 18px; background: var(--energy); box-shadow: 0 0 14px rgba(0,199,253,0.8); }
+#hud b { font-size: 34px; font-weight: 800; letter-spacing: -0.01em; }
+#hud span { font-family: var(--mono); font-size: 20px; font-weight: 600; letter-spacing: 0.12em; color: var(--dim); }
+#source { position: absolute; right: 70px; bottom: 34px; font-family: var(--mono); font-size: 17px; color: var(--faint); letter-spacing: 0.04em; }
+
+/* ---------- S4 +233% ---------- */
+#heroWrap { position: absolute; left: 0; right: 0; top: 250px; text-align: center; transform-origin: 50% 60%; }
+#hero { display: inline-block; font-size: 330px; font-weight: 800; letter-spacing: -0.055em; line-height: 1;
+  background: linear-gradient(180deg, #ffffff 10%, #7fe6ff 55%, var(--energy) 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+  filter: drop-shadow(0 0 40px rgba(0,199,253,0.35)); }
+#heroSub { position: absolute; left: 0; right: 0; top: 612px; text-align: center; font-family: var(--mono); font-size: 32px; font-weight: 600; letter-spacing: 0.1em; color: var(--text); }
+#heroSub2 { position: absolute; left: 0; right: 0; top: 664px; text-align: center; font-family: var(--mono); font-size: 24px; font-weight: 500; letter-spacing: 0.06em; color: var(--dim); }
+#heroLine { position: absolute; left: 0; right: 0; top: 752px; text-align: center; font-size: 64px; font-weight: 800; letter-spacing: -0.03em; }
+
+/* ---------- S5 로고 락업 ---------- */
+#logo2 { position: absolute; left: 580px; top: 318px; width: 760px; height: 299.7px; overflow: visible; }
+#dot2 { position: absolute; left: 0; top: 0; width: 54px; height: 54px; background: var(--energy); transform-origin: 50% 100%;
+  box-shadow: 0 0 30px rgba(0,199,253,0.8), 0 0 90px rgba(0,199,253,0.35); }
+#s5glow { position: absolute; width: 1400px; height: 1000px; left: 260px; top: 0; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0,104,181,0.40), rgba(0,104,181,0.08) 55%, transparent 80%); }
+#ticker { position: absolute; left: 0; right: 0; top: 690px; text-align: center; font-family: var(--mono); font-size: 32px; font-weight: 600; letter-spacing: 0.34em; color: var(--text); }
+#ticker b { color: var(--energy); font-weight: 700; }
+#tickRail { position: absolute; left: 810px; width: 300px; top: 750px; height: 3px; background: var(--energy); transform-origin: center; box-shadow: 0 0 16px rgba(0,199,253,0.8); }
+#legal { position: absolute; left: 0; right: 0; bottom: 38px; text-align: center; font-family: var(--mono); font-size: 17px; color: var(--faint); letter-spacing: 0.04em; }
+
+/* ---------- 효과 레이어 ---------- */
+#flash { position: absolute; inset: 0; background: radial-gradient(1200px 800px at 50% 50%, rgba(220,248,255,1), rgba(0,199,253,0.55) 60%, rgba(0,104,181,0.2));
+  mix-blend-mode: screen; opacity: 0; pointer-events: none; }
+#redFlash { position: absolute; inset: 0; background: radial-gradient(1200px 800px at 50% 50%, rgba(255,120,140,0.9), rgba(255,40,70,0.5) 60%, rgba(120,0,20,0.3));
+  mix-blend-mode: screen; opacity: 0; pointer-events: none; }
+#scan { position: absolute; inset: 0; opacity: 0; pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(0,0,0,0.35) 0 2px, transparent 2px 6px); }
+#black { position: absolute; inset: 0; background: #01030a; opacity: 0; pointer-events: none; }
+#grain { position: absolute; inset: -128px; background: url("assets/grain.png"); background-size: 256px 256px; opacity: 0.07; mix-blend-mode: overlay; pointer-events: none; }
+#vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(1500px 950px at 50% 50%, transparent 55%, rgba(0,0,0,0.6) 100%); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg">
+    <div class="base"></div><div class="glowA"></div><div class="glowB"></div><div class="grid"></div>
+    <div id="arcWrap"><img src="assets/arc-pattern.png" alt=""></div>
+    <div id="redTint"></div>
+  </div>
+
+  <div id="cam"><div id="rig">
+
+    <!-- 마디 1 : 점 → 픽셀 → 로고 -->
+    <section class="scene" id="s1">
+      <div id="s1glow"></div>
+      <svg id="logo1" viewBox="0 0 395.4 155.9"><g id="logo1letters" fill="#fff"></g></svg>
+      <div id="dot"></div>
+      <div id="s1capWrap"><span id="s1cap"><b>SINCE 1968</b> · SANTA CLARA, CALIFORNIA</span></div>
+    </section>
+
+    <!-- 마디 2 : 제품 -->
+    <section class="scene p3d" id="s2">
+      <div id="s2bg"></div>
+      <div id="s2head">
+        <div class="kicker" id="s2kick">What Intel makes</div>
+        <div id="s2title">
+          <span class="line"><span>Chips for PCs,</span></span>
+          <span class="line"><span>data centers <span class="blue">&amp; AI.</span></span></span>
+        </div>
+      </div>
+      <div class="card" id="c1"><img src="assets/core-ultra.png" alt=""><div class="sheen"></div></div>
+      <div class="card" id="c2"><img src="assets/arc.png" alt=""><div class="sheen"></div></div>
+      <div class="card" id="c3"><img src="assets/aipg-ui.jpg" alt=""><div class="sheen"></div></div>
+      <div class="clabel" id="l1"><b>Core Ultra</b><span>AI PC PROCESSORS</span></div>
+      <div class="clabel" id="l2"><b>Arc</b><span>GRAPHICS</span></div>
+      <div class="clabel" id="l3"><b>AI Playground</b><span>ON-DEVICE AI APP · OPEN SOURCE</span></div>
+    </section>
+
+    <!-- 마디 3-7 : 주가 차트 -->
+    <section class="scene" id="s3">
+      <div id="chart"></div>
+      <div id="hud"><i></i><b>INTC</b><span>NASDAQ · CLOSING PRICE, USD</span></div>
+      <div id="source">INTC closing prices (USD) · data as of Sep 25, 2026 · not investment advice</div>
+    </section>
+
+    <!-- 마디 7 : +233% -->
+    <section class="scene" id="s4">
+      <div id="heroWrap"><div id="hero">+233%</div></div>
+      <div id="heroSub">INTC · 2026 YEAR TO DATE</div>
+      <div id="heroSub2">$36.90 (Dec 31, 2025) → $123.00 (Sep 25, 2026)</div>
+      <div id="heroLine">First all-time highs since <span class="blue">2000.</span></div>
+    </section>
+
+    <!-- 마디 8 : 로고 락업 -->
+    <section class="scene" id="s5">
+      <div id="s5glow"></div>
+      <svg id="logo2" viewBox="0 0 395.4 155.9">
+        <defs>
+          <clipPath id="groundClip"><rect x="-20" y="-60" width="440" height="213"/></clipPath>
+          <linearGradient id="glintGrad" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset="0.5" stop-color="#00c7fd" stop-opacity="0.85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+          </linearGradient>
+          <mask id="logoMask" maskUnits="userSpaceOnUse" x="-50" y="-50" width="500" height="260">
+            <rect x="-50" y="-50" width="500" height="260" fill="black"/><g id="maskLetters" fill="white"></g>
+          </mask>
+        </defs>
+        <g clip-path="url(#groundClip)"><g id="logo2letters" fill="#fff"></g></g>
+        <g mask="url(#logoMask)"><g transform="skewX(-18)"><rect id="glint" x="-160" y="-40" width="90" height="240" fill="url(#glintGrad)"/></g></g>
+      </svg>
+      <div id="dot2"></div>
+      <div id="ticker">NASDAQ: <b>INTC</b></div>
+      <div id="tickRail"></div>
+      <div id="legal">Data: Nasdaq closing prices as of Sep 25, 2026 · Not investment advice · Not affiliated with Intel Corporation</div>
+    </section>
+
+    <canvas id="fx" width="1920" height="1080"></canvas>
+  </div></div>
+
+  <div id="flash"></div>
+  <div id="redFlash"></div>
+  <div id="scan"></div>
+  <div id="black"></div>
+  <div id="grain"></div>
+  <div id="vignette"></div>
+</div>
+
+<script src="node_modules/gsap/dist/gsap.min.js"></script>
+<script src="promo.js"></script>
+</body>
+</html>
