@@ -1,0 +1,18 @@
+{
+  "name": "bond-yield-explainer-video",
+  "private": true,
+  "description": "국채금리 설명 영상 자동 제작 (TTS + HTML 애니메이션 + ffmpeg)",
+  "scripts": {
+    "narration": "python3 make_narration.py",
+    "bgm": "python3 make_bgm.py",
+    "render": "node render.js"
+  },
+  "dependencies": {
+    "gsap": "^3.15.0",
+    "lucide-static": "^1.48.0",
+    "pretendard": "^1.3.9"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.1"
+  }
+}

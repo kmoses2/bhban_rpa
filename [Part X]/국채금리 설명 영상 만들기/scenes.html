@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>국채금리, 왜 이렇게 높을까?</title>
+<style>
+@font-face { font-family: "Pretendard"; font-weight: 400; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-Regular.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 500; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-Medium.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 600; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-SemiBold.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 700; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-Bold.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 800; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-ExtraBold.woff2") format("woff2"); }
+@font-face { font-family: "Pretendard"; font-weight: 900; src: url("node_modules/pretendard/dist/web/static/woff2/Pretendard-Black.woff2") format("woff2"); }
+
+:root {
+  --bg: #0B1324;
+  --card: rgba(255, 255, 255, 0.055);
+  --card-strong: rgba(255, 255, 255, 0.085);
+  --stroke: rgba(255, 255, 255, 0.11);
+  --text: #F4F6FB;
+  --muted: #A3B1C9;
+  --dim: #66758F;
+  --up: #FF5D5D;        /* 상승 (한국식: 빨강) */
+  --down: #4D8DFF;      /* 하락 (한국식: 파랑) */
+  --good: #34D6BF;      /* 긍정 */
+  --warn: #FFB547;      /* 주의 */
+  --series-1: #3987e5;  /* 차트: 국고채 3년물 */
+  --series-2: #d95926;  /* 차트: 국고채 10년물 */
+  --series-base: #8A97AE; /* 차트: 기준금리 (보조) */
+  --grid: rgba(255, 255, 255, 0.09);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+body {
+  color: var(--text);
+  font-family: "Pretendard", sans-serif;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+  -webkit-font-smoothing: antialiased;
+}
+#stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+/* ---------- 배경 ---------- */
+.bg { position: absolute; inset: 0; }
+.bg-base {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(1100px 760px at 12% 8%, rgba(38, 64, 128, 0.55), transparent 62%),
+    radial-gradient(1000px 700px at 92% 96%, rgba(74, 40, 110, 0.40), transparent 60%),
+    var(--bg);
+}
+.bg-grid {
+  position: absolute; inset: 0; opacity: 0.9;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: radial-gradient(1400px 900px at 50% 45%, #000 40%, transparent 100%);
+}
+.bg-glow {
+  position: absolute; width: 900px; height: 900px; border-radius: 50%;
+  left: 1100px; top: -300px;
+  background: radial-gradient(circle, rgba(255, 93, 93, 0.13), transparent 65%);
+}
+
+/* ---------- 상단 진행 표시 ---------- */
+#progress-track { position: absolute; left: 0; right: 0; top: 0; height: 6px; background: rgba(255,255,255,0.05); }
+#progress { position: absolute; left: 0; top: 0; height: 6px; width: 100%; background: linear-gradient(90deg, #4D8DFF, #FF5D5D); transform-origin: left center; }
+#nav { position: absolute; top: 34px; right: 120px; display: flex; gap: 30px; font-size: 24px; font-weight: 600; color: var(--muted); }
+#nav span { opacity: 0.35; }
+#brand { position: absolute; top: 34px; left: 120px; font-size: 24px; font-weight: 700; color: var(--muted); display: flex; align-items: center; gap: 12px; }
+#brand i { width: 12px; height: 12px; border-radius: 50%; background: var(--up); display: inline-block; }
+
+/* ---------- 공통 ---------- */
+.scene { position: absolute; inset: 0; visibility: hidden; }
+.abs { position: absolute; }
+.header { position: absolute; left: 120px; top: 96px; display: flex; align-items: center; gap: 26px; }
+.badge {
+  font-size: 30px; font-weight: 800; padding: 10px 24px; border-radius: 999px;
+  background: rgba(255, 93, 93, 0.16); color: #FF8A8A; border: 2px solid rgba(255, 93, 93, 0.45);
+}
+.badge.teal { background: rgba(52, 214, 191, 0.14); color: #6FE7D5; border-color: rgba(52, 214, 191, 0.45); }
+.badge.gray { background: rgba(255, 255, 255, 0.07); color: var(--muted); border-color: var(--stroke); }
+.h1 { font-size: 64px; font-weight: 800; line-height: 1.15; }
+.h1 em { font-style: normal; color: var(--up); }
+.card {
+  background: var(--card); border: 2px solid var(--stroke); border-radius: 30px;
+}
+.label { font-size: 30px; font-weight: 600; color: var(--muted); }
+.sub { font-size: 26px; font-weight: 500; color: var(--muted); line-height: 1.4; }
+.value { font-size: 88px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+.value small { font-size: 0.5em; font-weight: 700; margin-left: 4px; }
+.up { color: var(--up); }
+.down { color: var(--down); }
+.good { color: var(--good); }
+.ic { display: inline-flex; }
+.ic svg { width: 100%; height: 100%; stroke-width: 1.8; }
+.tag {
+  display: inline-flex; align-items: center; gap: 10px; font-size: 26px; font-weight: 700;
+  padding: 8px 18px; border-radius: 12px; background: rgba(255,255,255,0.08); color: var(--text);
+}
+.tag.red { background: rgba(255, 93, 93, 0.16); color: #FF9A9A; }
+.tag.teal { background: rgba(52, 214, 191, 0.14); color: #7FEADA; }
+
+/* 흐름도 (A → B → C) */
+.flow { display: flex; align-items: center; gap: 22px; }
+.flow .node {
+  display: flex; align-items: center; gap: 18px; padding: 26px 34px; border-radius: 26px;
+  background: var(--card-strong); border: 2px solid var(--stroke); font-size: 38px; font-weight: 800; white-space: nowrap;
+}
+.flow .node .ic { width: 48px; height: 48px; color: var(--muted); }
+.flow .node .arrow-up { color: var(--up); font-weight: 900; }
+.flow .node .arrow-down { color: var(--down); font-weight: 900; }
+.flow .link { width: 64px; height: 40px; color: var(--dim); display: flex; }
+.flow .link svg { width: 100%; height: 100%; }
+
+/* ---------- 자막 ---------- */
+#captions { position: absolute; left: 0; right: 0; bottom: 0; height: 200px; pointer-events: none; }
+.cap {
+  position: absolute; left: 50%; bottom: 52px; max-width: 1560px; width: max-content;
+  padding: 14px 34px; border-radius: 16px;
+  background: rgba(4, 9, 20, 0.78); border: 1px solid rgba(255,255,255,0.08);
+  font-size: 40px; font-weight: 600; line-height: 1.42; text-align: center; color: #fff; text-wrap: balance;
+  visibility: hidden;
+}
+
+/* ---------- 인트로 ---------- */
+#s-intro .deco { position: absolute; inset: 0; }
+#introPath { fill: none; stroke: url(#introGrad); stroke-width: 7; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 14px rgba(255, 93, 93, 0.55)); opacity: 0.5; }
+#introDot { fill: #FF5D5D; opacity: 0.8; }
+#introKicker { position: absolute; left: 120px; top: 236px; }
+.intro-title { position: absolute; left: 116px; top: 300px; font-size: 128px; font-weight: 900; line-height: 1.12; letter-spacing: -0.04em; }
+.intro-title span { display: block; }
+.intro-title em { font-style: normal; color: var(--up); }
+#introAgenda { position: absolute; left: 120px; top: 640px; display: flex; gap: 16px; }
+#introAgenda .tag { font-size: 30px; padding: 12px 22px; }
+.stat-chip { position: absolute; left: 1190px; width: 610px; padding: 34px 40px; background: rgba(19, 29, 51, 0.92); }
+.stat-chip .row { display: flex; align-items: baseline; justify-content: space-between; }
+.stat-chip .value { font-size: 96px; }
+.stat-chip .sub { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+#introChipKR { top: 228px; }
+#introChipUS { top: 478px; }
+
+/* ---------- 기초 개념 ---------- */
+#basicsA { position: absolute; left: 0; right: 0; top: 250px; height: 560px; }
+.party { position: absolute; top: 40px; width: 300px; text-align: center; }
+.party .circle {
+  width: 210px; height: 210px; margin: 0 auto; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: var(--card-strong); border: 2px solid var(--stroke);
+}
+.party .circle .ic { width: 104px; height: 104px; }
+.party .name { margin-top: 22px; font-size: 44px; font-weight: 800; }
+#partyGov { left: 250px; }
+#partyInv { left: 1370px; }
+.xfer { position: absolute; left: 600px; width: 720px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.xfer svg { width: 720px; height: 44px; }
+.xfer .what { display: flex; align-items: center; gap: 14px; font-size: 34px; font-weight: 700; }
+.xfer .what .ic { width: 44px; height: 44px; }
+#xferMoney { top: 40px; }
+#xferBond { top: 190px; }
+#basicsFormula {
+  position: absolute; left: 50%; top: 380px; transform: translateX(-50%);
+  padding: 28px 48px; font-size: 44px; font-weight: 800; white-space: nowrap; display: flex; gap: 22px; align-items: center;
+  background: linear-gradient(90deg, rgba(77,141,255,0.16), rgba(255,93,93,0.16)); border: 2px solid rgba(255,255,255,0.14); border-radius: 26px;
+}
+#basicsFormula .eq { color: var(--muted); font-weight: 600; }
+
+#basicsB { position: absolute; left: 0; right: 0; top: 230px; height: 600px; }
+#seesaw { position: absolute; left: 460px; top: 110px; width: 1000px; height: 440px; }
+#plank { position: absolute; left: 0; top: 240px; width: 1000px; height: 26px; border-radius: 13px; background: #C9D3E6; transform-origin: 500px 13px; }
+.seat { position: absolute; top: -212px; width: 300px; padding: 26px 20px; text-align: center; border-radius: 26px; background: var(--card-strong); border: 2px solid var(--stroke); }
+.seat .t { font-size: 44px; font-weight: 800; }
+.seat .d { font-size: 64px; font-weight: 900; margin-top: 6px; line-height: 1; }
+#seatPrice { left: -20px; }
+#seatRate { left: 720px; }
+#fulcrum { position: absolute; left: 430px; top: 266px; width: 140px; height: 150px; }
+#fulcrum polygon { fill: #5E6D89; }
+#seesawCaption { position: absolute; left: 0; right: 0; top: 0; text-align: center; font-size: 34px; font-weight: 700; color: var(--muted); }
+
+#basicsC { position: absolute; left: 0; right: 0; top: 360px; height: 460px; display: flex; flex-direction: column; align-items: center; gap: 46px; }
+#basicsC .root-title { font-size: 40px; font-weight: 800; color: var(--muted); }
+#basicsC .root-title b { color: var(--text); }
+
+/* ---------- 차트 ---------- */
+#chartSvg { position: absolute; left: 100px; top: 222px; width: 1240px; height: 640px; overflow: visible; }
+#chartSvg .gridline { stroke: var(--grid); stroke-width: 2; }
+#chartSvg .axis-label { fill: var(--muted); font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#chartSvg .series { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+#chartSvg .dot { stroke: var(--bg); stroke-width: 4; }
+#chartSvg .dlabel { fill: var(--text); font-size: 30px; font-weight: 800; }
+#chartSvg .dlabel.small { font-size: 24px; font-weight: 700; fill: var(--muted); }
+#chartSvg .note { fill: var(--muted); font-size: 24px; font-weight: 600; }
+#chartSvg .note-line { stroke: rgba(255,255,255,0.22); stroke-width: 2; }
+.legend { position: absolute; left: 1420px; top: 236px; display: flex; flex-direction: column; gap: 14px; font-size: 27px; font-weight: 600; color: var(--text); }
+.legend div { display: flex; align-items: center; gap: 14px; }
+.legend .key { width: 36px; height: 6px; border-radius: 3px; }
+.delta-card { position: absolute; left: 1420px; width: 400px; padding: 24px 30px; }
+.delta-card .label { font-size: 26px; display: flex; align-items: center; gap: 12px; }
+.delta-card .label i { width: 16px; height: 16px; border-radius: 50%; display: inline-block; }
+.delta-card .range { font-size: 36px; font-weight: 800; margin-top: 8px; white-space: nowrap; }
+.delta-card .range .arr { color: var(--dim); margin: 0 6px; }
+.delta-card .pp { margin-top: 10px; }
+#delta3 { top: 420px; }
+#delta10 { top: 612px; }
+#chartSource { position: absolute; left: 1420px; top: 812px; width: 400px; font-size: 20px; line-height: 1.5; color: var(--dim); font-weight: 500; }
+
+/* ---------- 이유 ① ---------- */
+.stat-row { position: absolute; left: 120px; width: 760px; height: 158px; padding: 0 40px; display: flex; align-items: center; justify-content: space-between; }
+.stat-row .l { display: flex; flex-direction: column; gap: 8px; }
+.stat-row .value { font-size: 80px; }
+#r1cpi { top: 238px; }
+#r1core { top: 418px; }
+#r1growth { top: 598px; }
+#r1growth .value { font-size: 58px; white-space: nowrap; }
+#r1growth .value .arr { color: var(--dim); font-weight: 600; margin: 0 6px; }
+#r1stairs { position: absolute; left: 930px; top: 238px; width: 870px; height: 518px; padding: 32px 40px; }
+#r1stairs .title { font-size: 32px; font-weight: 800; }
+#r1stairs .bars { position: absolute; left: 40px; right: 40px; bottom: 34px; height: 380px; display: flex; align-items: flex-end; justify-content: space-around; }
+.bar-col { width: 150px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+.bar-col .bval { font-size: 40px; font-weight: 800; margin-bottom: 12px; }
+.bar-col .bar { width: 96px; border-radius: 10px 10px 0 0; background: #3DB9A6; transform-origin: bottom center; }
+.bar-col .bdate { margin-top: 14px; font-size: 25px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.bar-col.future .bar { background: transparent; border: 3px dashed rgba(255,255,255,0.4); border-bottom: none; }
+.bar-col.future .bval { color: var(--muted); }
+#r1badge { position: absolute; left: 1250px; top: 262px; }
+#r1next { position: absolute; left: 930px; top: 776px; font-size: 30px; font-weight: 700; display: flex; align-items: center; gap: 14px; }
+
+/* ---------- 이유 ② ---------- */
+#r2oil { position: absolute; left: 120px; top: 240px; width: 760px; height: 390px; padding: 40px 46px; }
+#r2oil .big { font-size: 180px; font-weight: 900; line-height: 1; letter-spacing: -0.05em; margin-top: 10px; }
+#r2oil .big small { font-size: 60px; font-weight: 800; margin-left: 10px; color: var(--muted); letter-spacing: -0.02em; }
+#r2oil .big .cur { font-size: 100px; margin-right: 4px; }
+#r2hormuz { position: absolute; left: 940px; top: 240px; width: 860px; height: 390px; padding: 40px 46px; }
+#r2hormuz .ttl { display: flex; align-items: center; gap: 18px; font-size: 44px; font-weight: 800; }
+#r2hormuz .ttl .ic { width: 58px; height: 58px; color: var(--muted); }
+#r2hormuz .line { margin-top: 26px; font-size: 32px; font-weight: 600; color: var(--muted); line-height: 1.5; }
+#r2hormuz .line b { color: var(--text); }
+#r2hormuz .warnrow { margin-top: 30px; display: flex; align-items: center; gap: 14px; font-size: 32px; font-weight: 800; color: var(--warn); }
+#r2hormuz .warnrow .ic { width: 42px; height: 42px; }
+#r2chain { position: absolute; left: 0; right: 0; top: 672px; justify-content: center; }
+
+/* ---------- 이유 ③ ---------- */
+#r3hero { position: absolute; left: 120px; top: 240px; width: 760px; height: 420px; padding: 42px 46px; }
+#r3hero .value { font-size: 170px; font-weight: 900; margin-top: 18px; }
+#r3hero .value small { font-size: 72px; }
+#r3hero .sub { margin-top: 18px; font-size: 30px; }
+.side-card { position: absolute; left: 940px; width: 860px; height: 196px; padding: 30px 40px; display: flex; flex-direction: column; justify-content: center; gap: 10px; }
+.side-card .top { display: flex; align-items: baseline; justify-content: space-between; }
+.side-card .value { font-size: 64px; }
+#r3fed { top: 240px; }
+#r3fiscal { top: 464px; }
+#r3chain { position: absolute; left: 0; right: 0; top: 700px; justify-content: center; }
+#r3chain .node { font-size: 34px; padding: 22px 30px; }
+
+/* ---------- 이유 ④ ---------- */
+#r4rates { position: absolute; left: 120px; top: 240px; width: 780px; height: 450px; padding: 30px 44px; }
+#r4rates .ttl { font-size: 32px; font-weight: 800; margin-bottom: 10px; }
+.cb-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; margin: 0 -18px; border-top: 2px solid rgba(255,255,255,0.07); border-radius: 16px; }
+.cb-row .who { font-size: 38px; font-weight: 800; }
+.cb-row .who small { display: block; font-size: 24px; font-weight: 600; color: var(--muted); margin-top: 6px; }
+.cb-row .rate { font-size: 56px; font-weight: 800; white-space: nowrap; }
+.cb-row .rate .arrow-up { color: var(--up); font-size: 40px; margin-left: 8px; }
+#r4flows { position: absolute; left: 960px; top: 240px; width: 840px; height: 450px; padding: 36px 44px; }
+#r4flows .ttl { font-size: 32px; font-weight: 800; }
+#r4flows .wgbi { margin-top: 8px; font-size: 25px; color: var(--muted); font-weight: 600; }
+.nbars { position: absolute; left: 44px; right: 44px; top: 190px; height: 260px; }
+.nbars .zero { position: absolute; left: 0; right: 0; top: 130px; height: 2px; background: rgba(255,255,255,0.25); }
+.nbar { position: absolute; width: 150px; border-radius: 8px; }
+.nbar-lbl { position: absolute; width: 260px; text-align: center; font-size: 30px; font-weight: 800; }
+.nbar-lbl small { display: block; font-size: 24px; font-weight: 600; color: var(--muted); }
+#r4badge { position: absolute; left: 1420px; top: 262px; }
+#r4chain { position: absolute; left: 0; right: 0; top: 728px; justify-content: center; }
+#r4chain .node { font-size: 34px; padding: 20px 30px; }
+
+/* ---------- 의미 ① ---------- */
+#m1q { position: absolute; left: 0; right: 0; top: 380px; text-align: center; font-size: 96px; font-weight: 900; letter-spacing: -0.04em; }
+#m1flow { position: absolute; left: 0; right: 0; top: 262px; justify-content: center; }
+.m1card { position: absolute; top: 470px; width: 820px; height: 300px; padding: 40px 48px; }
+.m1card .value { font-size: 104px; margin-top: 18px; white-space: nowrap; }
+.m1card .sub { margin-top: 16px; }
+#m1bank { left: 120px; }
+#m1loan { left: 980px; }
+
+/* ---------- 의미 ② ---------- */
+.m2card { position: absolute; top: 240px; width: 396px; height: 330px; padding: 34px 32px; display: flex; flex-direction: column; gap: 14px; }
+.m2card .ic { width: 64px; height: 64px; color: var(--muted); }
+.m2card .who { font-size: 36px; font-weight: 800; margin-top: 6px; }
+.m2card .what { font-size: 34px; font-weight: 800; line-height: 1.3; }
+#m2a { left: 120px; } #m2b { left: 540px; } #m2c { left: 960px; } #m2d { left: 1380px; }
+#m2gov { position: absolute; left: 120px; top: 600px; width: 1656px; height: 190px; padding: 0 48px; display: flex; align-items: center; gap: 34px;
+  background: linear-gradient(90deg, rgba(255,93,93,0.14), rgba(255,255,255,0.04)); }
+#m2gov .ic { width: 84px; height: 84px; color: #FF9A9A; flex: none; }
+#m2gov .who { font-size: 32px; font-weight: 700; color: var(--muted); }
+#m2gov .big { font-size: 60px; font-weight: 900; margin-top: 4px; white-space: nowrap; }
+#m2gov .sub { margin-left: auto; text-align: right; font-size: 26px; }
+
+/* ---------- 의미 ③ ---------- */
+#m3thermo { position: absolute; left: 120px; top: 250px; width: 640px; height: 470px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; padding: 30px; }
+#m3thermo .ic { width: 200px; height: 200px; color: var(--up); }
+#m3thermo .t { font-size: 44px; font-weight: 800; text-align: center; line-height: 1.3; }
+#m3thermo .t span { color: var(--muted); font-size: 32px; font-weight: 600; display: block; }
+.m3say { position: absolute; left: 840px; width: 960px; height: 140px; padding: 0 44px; display: flex; align-items: center; gap: 24px; font-size: 42px; font-weight: 800; }
+.m3say .n { width: 64px; height: 64px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 34px; flex: none; }
+#m3s1 { top: 250px; } #m3s2 { top: 414px; }
+#m3big { position: absolute; left: 840px; top: 590px; font-size: 76px; font-weight: 900; letter-spacing: -0.04em; }
+#m3big u { text-decoration: none; background: linear-gradient(transparent 68%, rgba(255,93,93,0.55) 68%); padding: 0 6px; }
+
+/* ---------- 전망 ---------- */
+.wrow { position: absolute; left: 120px; width: 1680px; height: 104px; display: flex; align-items: center; gap: 32px; padding: 0 40px; }
+.wrow .num { width: 60px; height: 60px; border-radius: 50%; background: rgba(77,141,255,0.2); color: #9CC0FF; font-size: 32px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none; }
+.wrow .when { width: 200px; font-size: 32px; font-weight: 800; color: #9CC0FF; flex: none; }
+.wrow .what { font-size: 40px; font-weight: 800; }
+.wrow .note { margin-left: auto; font-size: 27px; color: var(--muted); font-weight: 600; }
+#w1 { top: 232px; } #w2 { top: 352px; } #w3 { top: 472px; } #w4 { top: 592px; }
+#wAlert { position: absolute; left: 120px; top: 726px; width: 1680px; height: 100px; padding: 0 40px; display: flex; align-items: center; gap: 22px;
+  border-radius: 24px; background: rgba(255,181,71,0.12); border: 2px solid rgba(255,181,71,0.45); font-size: 34px; font-weight: 800; }
+#wAlert .ic { width: 48px; height: 48px; color: var(--warn); flex: none; }
+#wAlert .muted { color: var(--muted); font-weight: 600; }
+
+/* ---------- 정리 ---------- */
+.sumrow { position: absolute; left: 120px; width: 1680px; height: 168px; padding: 0 44px; display: flex; align-items: center; gap: 36px; }
+.sumrow .k { width: 130px; font-size: 40px; font-weight: 900; flex: none; }
+.sumrow .chips { display: flex; flex-wrap: wrap; gap: 14px; }
+.sumrow .chips .tag { font-size: 32px; padding: 12px 22px; }
+.sumrow .big { font-size: 46px; font-weight: 900; }
+#sum1 { top: 236px; } #sum2 { top: 428px; } #sum3 { top: 620px; }
+#endcard { position: absolute; inset: 0; background: rgba(8, 13, 26, 0.985); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 30px; text-align: center; visibility: hidden; }
+#endcard .t { font-size: 72px; font-weight: 900; }
+#endcard .d { font-size: 32px; color: var(--muted); font-weight: 600; line-height: 1.6; }
+#endcard .s { font-size: 24px; color: var(--dim); font-weight: 500; line-height: 1.6; max-width: 1400px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="bg">
+    <div class="bg-base"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-glow" id="bgGlow"></div>
+  </div>
+
+  <!-- ================= 인트로 ================= -->
+  <section class="scene" id="s-intro">
+    <svg class="deco" viewBox="0 0 1920 1080">
+      <defs>
+        <linearGradient id="introGrad" x1="0" x2="1" y1="0" y2="0">
+          <stop offset="0" stop-color="#4D8DFF" stop-opacity="0.2"/>
+          <stop offset="1" stop-color="#FF5D5D"/>
+        </linearGradient>
+      </defs>
+      <path id="introPath" d="M -40 1000 C 180 985, 300 960, 430 930 S 650 880, 760 890 S 980 820, 1090 790 S 1300 760, 1420 690 S 1640 600, 1960 520"/>
+    </svg>
+    <div class="tag" id="introKicker"><span class="ic" data-i="calendar-days" style="width:30px;height:30px"></span>2026년 9월 기준 · 경제 이슈 해설</div>
+    <h1 class="intro-title"><span id="introT1">국채금리,</span><span id="introT2">왜 이렇게 <em>높을까?</em></span></h1>
+    <div id="introAgenda">
+      <span class="tag">① 국채금리란?</span>
+      <span class="tag">② 왜 올랐나</span>
+      <span class="tag">③ 무슨 의미인가</span>
+    </div>
+    <div class="card stat-chip" id="introChipKR">
+      <div class="label">한국 국고채 3년물</div>
+      <div class="row"><div class="value">4.01<small>%</small></div><span class="tag red">▲ 34개월 만에 4%대</span></div>
+      <div class="sub">9월 11일 종가 · 2023년 11월 이후 처음</div>
+    </div>
+    <div class="card stat-chip" id="introChipUS">
+      <div class="label">미국 국채 10년물</div>
+      <div class="row"><div class="value">5.21<small>%</small></div><span class="tag red">▲ 2007년 이후 최고</span></div>
+      <div class="sub">9월 28일 · 추석 연휴 중에도 상승</div>
+    </div>
+  </section>
+
+  <!-- ================= 기초 개념 ================= -->
+  <section class="scene" id="s-basics">
+    <div class="header"><span class="badge gray">기초 개념</span><div class="h1" id="basicsTitle">국채금리란?</div></div>
+    <div id="basicsA">
+      <div class="party" id="partyGov"><div class="circle"><span class="ic" data-i="landmark"></span></div><div class="name">정부</div></div>
+      <div class="party" id="partyInv"><div class="circle"><span class="ic" data-i="users"></span></div><div class="name">투자자</div></div>
+      <div class="xfer" id="xferMoney">
+        <div class="what"><span class="ic" data-i="banknote" style="color:#7FEADA"></span>돈을 빌려주고</div>
+        <svg viewBox="0 0 720 44"><path d="M 700 22 L 24 22" stroke="#7FEADA" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M 44 6 L 20 22 L 44 38" stroke="#7FEADA" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+      </div>
+      <div class="xfer" id="xferBond">
+        <svg viewBox="0 0 720 44"><path d="M 20 22 L 696 22" stroke="#FFB547" stroke-width="5" stroke-linecap="round" fill="none"/><path d="M 676 6 L 700 22 L 676 38" stroke="#FFB547" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        <div class="what"><span class="ic" data-i="scroll-text" style="color:#FFB547"></span>국채(차용증)를 받는다 — 이자 + 원금 약속</div>
+      </div>
+      <div id="basicsFormula"><span>국채금리</span><span class="eq">=</span><span>나라가 돈을 빌리는 <em style="font-style:normal;color:var(--up)">비용(이자율)</em></span></div>
+    </div>
+    <div id="basicsB">
+      <div id="seesawCaption">채권 가격과 금리는 <b style="color:var(--text)">시소</b>처럼 반대로 움직인다</div>
+      <div id="seesaw">
+        <div id="plank">
+          <div class="seat" id="seatPrice"><div class="t">채권 가격</div><div class="d down" id="seatPriceArrow">▼</div></div>
+          <div class="seat" id="seatRate"><div class="t">금리</div><div class="d up" id="seatRateArrow">▲</div></div>
+        </div>
+        <svg id="fulcrum" viewBox="0 0 140 150"><polygon points="70,0 140,150 0,150"/></svg>
+      </div>
+    </div>
+    <div id="basicsC">
+      <div class="root-title">모든 금리의 기준, <b>'금리의 뿌리'</b></div>
+      <div class="flow">
+        <div class="node" id="bc1"><span class="ic" data-i="landmark"></span>국채금리</div>
+        <div class="link"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="node" id="bc2"><span class="ic" data-i="building-2"></span>은행채·회사채 금리</div>
+        <div class="link"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="node" id="bc3"><span class="ic" data-i="wallet"></span>대출·예금 금리</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= 차트 ================= -->
+  <section class="scene" id="s-chart">
+    <div class="header"><span class="badge gray">얼마나 올랐나</span><div class="h1">국고채 금리, <em>9개월 새 1%p↑</em></div></div>
+    <svg id="chartSvg" viewBox="0 0 1240 640"></svg>
+    <div class="legend" id="chartLegend">
+      <div><span class="key" style="background:var(--series-1)"></span>국고채 3년물</div>
+      <div><span class="key" style="background:var(--series-2)"></span>국고채 10년물</div>
+      <div><span class="key" style="background:var(--series-base);height:4px"></span>한국은행 기준금리</div>
+    </div>
+    <div class="card delta-card" id="delta3">
+      <div class="label"><i style="background:var(--series-1)"></i>3년물</div>
+      <div class="range">2.95% <span class="arr">→</span> 4.01%</div>
+      <div class="pp"><span class="tag red">▲ 1.06%p</span></div>
+    </div>
+    <div class="card delta-card" id="delta10">
+      <div class="label"><i style="background:var(--series-2)"></i>10년물</div>
+      <div class="range">3.39% <span class="arr">→</span> 4.54%</div>
+      <div class="pp"><span class="tag red">▲ 1.16%p</span></div>
+    </div>
+    <div id="chartSource">월말 종가 기준(9월은 11일·23일)<br>자료: 금융투자협회, 한국은행, 언론 보도 종합</div>
+  </section>
+
+  <!-- ================= 이유 ① ================= -->
+  <section class="scene" id="s-reason1">
+    <div class="header"><span class="badge">이유 ①</span><div class="h1">끈질긴 물가, 올라간 기준금리</div></div>
+    <div class="card stat-row" id="r1cpi">
+      <div class="l"><div class="label">8월 소비자물가 상승률</div><div class="sub">전년 같은 달 대비</div></div>
+      <div class="value up">3.1<small>%</small></div>
+    </div>
+    <div class="card stat-row" id="r1core">
+      <div class="l"><div class="label">근원물가 상승률</div><div class="sub">식료품·에너지 제외 · 3년 3개월 만에 최고</div></div>
+      <div class="value up">3.4<small>%</small></div>
+    </div>
+    <div class="card stat-row" id="r1growth">
+      <div class="l"><div class="label">올해 성장률 전망</div><div class="sub">한국은행 8월 · 반도체 수출 호조</div></div>
+      <div class="value">2.6<small>%</small><span class="arr">→</span>3.3<small>%</small></div>
+    </div>
+    <div class="card" id="r1stairs">
+      <div class="title">한국은행 기준금리</div>
+      <div class="bars">
+        <div class="bar-col" id="r1b1"><div class="bval">2.50%</div><div class="bar" style="height:150px"></div><div class="bdate">~7월 15일</div></div>
+        <div class="bar-col" id="r1b2"><div class="bval">2.75%</div><div class="bar" style="height:205px"></div><div class="bdate">7월 16일 ▲</div></div>
+        <div class="bar-col" id="r1b3"><div class="bval">3.00%</div><div class="bar" style="height:260px"></div><div class="bdate">8월 27일 ▲</div></div>
+        <div class="bar-col future" id="r1b4"><div class="bval">?</div><div class="bar" style="height:315px"></div><div class="bdate">10월 22일</div></div>
+      </div>
+    </div>
+    <div class="tag red" id="r1badge">3년 6개월 만의 인상 · 두 달 연속</div>
+    <div id="r1next"><span class="tag">추가 인상 가능성</span><span style="color:var(--dim)">→</span><span>시장금리가 <b class="up">먼저 상승</b></span></div>
+  </section>
+
+  <!-- ================= 이유 ② ================= -->
+  <section class="scene" id="s-reason2">
+    <div class="header"><span class="badge">이유 ②</span><div class="h1">중동 긴장과 100달러 유가</div></div>
+    <div class="card" id="r2oil">
+      <div class="label">브렌트유 (배럴당)</div>
+      <div class="big"><span class="cur">$</span><span id="r2num">100</span><small>돌파</small></div>
+      <div class="sub" style="margin-top:22px">9월 9일 · 7월 이후 다시 100달러 넘어</div>
+    </div>
+    <div class="card" id="r2hormuz">
+      <div class="ttl"><span class="ic" data-i="ship"></span>호르무즈 해협</div>
+      <div class="line">세계 원유·가스 교역의 <b>약 20%</b>가<br>지나던 핵심 수송로</div>
+      <div class="warnrow"><span class="ic" data-i="triangle-alert"></span>미국 ↔ 이란 충돌로 긴장 고조</div>
+    </div>
+    <div class="flow" id="r2chain">
+      <div class="node" id="r2c1"><span class="ic" data-i="fuel"></span>유가 <span class="arrow-up">▲</span></div>
+      <div class="link" id="r2l1"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="node" id="r2c2"><span class="ic" data-i="shopping-cart"></span>물가 <span class="arrow-up">▲</span></div>
+      <div class="link" id="r2l2"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="node" id="r2c3"><span class="ic" data-i="percent"></span>금리 <span class="arrow-up">▲</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 이유 ③ ================= -->
+  <section class="scene" id="s-reason3">
+    <div class="header"><span class="badge">이유 ③</span><div class="h1">미국 국채금리 5% 돌파</div></div>
+    <div class="card" id="r3hero">
+      <div class="label">미국 국채 10년물 금리</div>
+      <div class="value up"><span id="r3num">5.21</span><small>%</small></div>
+      <div class="sub">9월 28일 · 2007년 이후 최고 수준</div>
+    </div>
+    <div class="card side-card" id="r3fed">
+      <div class="top"><div class="label">미국 연준 기준금리</div><div class="value">3.75~4.00<small>%</small></div></div>
+      <div class="sub">9월 16일 0.25%p 인상 · 2023년 이후 첫 인상</div>
+    </div>
+    <div class="card side-card" id="r3fiscal">
+      <div class="top"><div class="label">막대한 재정적자</div><div class="value" style="font-size:52px">국채 발행 <span class="up">▲</span></div></div>
+      <div class="sub">빚을 더 내야 함 → 공급 부담 → 금리 상승 압력</div>
+    </div>
+    <div class="flow" id="r3chain">
+      <div class="node" id="r3c1">미국 금리 <span class="arrow-up">▲</span></div>
+      <div class="link"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="node" id="r3c2">한국 국채 매력 <span class="arrow-down">▼</span></div>
+      <div class="link"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="node" id="r3c3">더 높은 이자 필요 → 한국 금리 <span class="arrow-up">▲</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 이유 ④ ================= -->
+  <section class="scene" id="s-reason4">
+    <div class="header"><span class="badge">이유 ④</span><div class="h1">세계 곳곳의 금리 인상, 등 돌린 외국인</div></div>
+    <div class="card" id="r4rates">
+      <div class="ttl">주요국 기준금리 (2026년 인상)</div>
+      <div class="cb-row" id="r4us"><div class="who">미국 연준<small>9월 인상</small></div><div class="rate">3.75~4.00%<span class="arrow-up">▲</span></div></div>
+      <div class="cb-row" id="r4kr"><div class="who">한국은행<small>7·8월 연속 인상</small></div><div class="rate">3.00%<span class="arrow-up">▲</span></div></div>
+      <div class="cb-row" id="r4jp"><div class="who">일본은행<small>9월 인상 · 1995년 이후 최고(31년 만)</small></div><div class="rate">1.25%<span class="arrow-up">▲</span></div></div>
+    </div>
+    <div class="card" id="r4flows">
+      <div class="ttl">외국인의 한국 채권 순매수</div>
+      <div class="wgbi">올해 세계국채지수(WGBI) 편입에도…</div>
+      <div class="nbars">
+        <div class="zero"></div>
+        <div class="nbar" id="r4jul" style="left:120px; top:30px; height:100px; background:var(--up)"></div>
+        <div class="nbar" id="r4aug" style="left:470px; top:132px; height:46px; background:var(--down)"></div>
+        <div class="nbar-lbl" id="r4julL" style="left:65px; top:-44px">+1조 8,119억<small>7월 순매수</small></div>
+        <div class="nbar-lbl" id="r4augL" style="left:415px; top:188px">−8,397억<small>8월 순매도</small></div>
+      </div>
+    </div>
+    <div class="tag red" id="r4badge">3년 7개월 만에 첫 순매도</div>
+    <div class="flow" id="r4chain">
+      <div class="node" id="r4c1"><span class="ic" data-i="users"></span>사는 사람 <span class="arrow-down">▼</span></div>
+      <div class="link"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="node" id="r4c2"><span class="ic" data-i="scroll-text"></span>채권 가격 <span class="arrow-down">▼</span></div>
+      <div class="link"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="node" id="r4c3"><span class="ic" data-i="percent"></span>금리 <span class="arrow-up">▲</span></div>
+    </div>
+  </section>
+
+  <!-- ================= 의미 ① ================= -->
+  <section class="scene" id="s-meaning1">
+    <div id="m1q">그렇다면, 우리에게는?</div>
+    <div class="header" id="m1header"><span class="badge teal">의미 ①</span><div class="h1">내 대출 이자가 오른다</div></div>
+    <div class="flow" id="m1flow">
+      <div class="node" id="m1f1"><span class="ic" data-i="landmark"></span>국고채 금리 <span class="arrow-up">▲</span></div>
+      <div class="link"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="node" id="m1f2"><span class="ic" data-i="building-2"></span>은행채 금리 <span class="arrow-up">▲</span></div>
+      <div class="link"><svg viewBox="0 0 64 40"><path d="M4 20 H54 M42 8 L56 20 L42 32" stroke="currentColor" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="node" id="m1f3"><span class="ic" data-i="house"></span>대출금리 <span class="arrow-up">▲</span></div>
+    </div>
+    <div class="card m1card" id="m1bank">
+      <div class="label">은행채 5년물 (AAA)</div>
+      <div class="value up">4.66<small>%</small></div>
+      <div class="sub">9월 15일 · 2년 10개월 만에 최고 · 고정형 주담대의 기준</div>
+    </div>
+    <div class="card m1card" id="m1loan">
+      <div class="label">5대 은행 고정형 주택담보대출</div>
+      <div class="value up">4.89~7.29<small>%</small></div>
+      <div class="sub">9월 16일 기준 · 상단이 7%대 중반 근접</div>
+    </div>
+  </section>
+
+  <!-- ================= 의미 ② ================= -->
+  <section class="scene" id="s-meaning2">
+    <div class="header"><span class="badge teal">의미 ②</span><div class="h1">돈의 흐름이 달라진다</div></div>
+    <div class="card m2card" id="m2a"><span class="ic" data-i="piggy-bank" style="color:#7FEADA"></span><div class="who">예금 · 새로 사는 채권</div><div class="what good">이자 수익 ▲</div><div class="sub">높아진 금리로 저축</div></div>
+    <div class="card m2card" id="m2b"><span class="ic" data-i="trending-down"></span><div class="who">이미 가진 채권</div><div class="what up">가격 하락 → 손실</div><div class="sub">금리가 오르면 채권값 ▼</div></div>
+    <div class="card m2card" id="m2c"><span class="ic" data-i="factory"></span><div class="who">기업</div><div class="what up">자금 조달 비용 ▲</div><div class="sub">회사채·대출 이자 부담</div></div>
+    <div class="card m2card" id="m2d"><span class="ic" data-i="chart-line"></span><div class="who">주식 · 부동산</div><div class="what up">가격 부담 ▲</div><div class="sub">높은 금리 = 자산값 할인</div></div>
+    <div class="card" id="m2gov">
+      <span class="ic" data-i="landmark"></span>
+      <div><div class="who">나라 살림 · 2027년 국고채 이자 (정부 예산안)</div><div class="big">42조 8천억 원</div></div>
+      <div class="sub">올해 34조 원대 →<br>처음으로 40조 원 넘어설 전망</div>
+    </div>
+  </section>
+
+  <!-- ================= 의미 ③ ================= -->
+  <section class="scene" id="s-meaning3">
+    <div class="header"><span class="badge teal">의미 ③</span><div class="h1">시장이 보내는 신호</div></div>
+    <div class="card" id="m3thermo"><span class="ic" data-i="thermometer"></span><div class="t">국채금리는<br>경제의 체온계<span>지금 체온: 높음</span></div></div>
+    <div class="card m3say" id="m3s1"><span class="n">1</span>물가가 쉽게 잡히지 않는다</div>
+    <div class="card m3say" id="m3s2"><span class="n">2</span>높은 금리가 생각보다 오래 갈 수 있다</div>
+    <div id="m3big">= <u>돈의 값이 비싸진 시대</u></div>
+  </section>
+
+  <!-- ================= 전망 ================= -->
+  <section class="scene" id="s-watch">
+    <div class="header"><span class="badge gray">전망</span><div class="h1">앞으로 체크할 4가지</div></div>
+    <div class="card wrow" id="w1"><span class="num">1</span><span class="when">10월 초</span><span class="what">9월 소비자물가 발표</span><span class="note">물가가 꺾여야 금리도 진정</span></div>
+    <div class="card wrow" id="w2"><span class="num">2</span><span class="when">10월 22일</span><span class="what">한국은행 금통위</span><span class="note">추가 인상 여부</span></div>
+    <div class="card wrow" id="w3"><span class="num">3</span><span class="when">수시</span><span class="what">미국 국채금리 · 연준 행보</span><span class="note">추가 인상 베팅 확대</span></div>
+    <div class="card wrow" id="w4"><span class="num">4</span><span class="when">수시</span><span class="what">미국-이란 협상 · 국제유가</span><span class="note">호르무즈 해협 개방 여부</span></div>
+    <div id="wAlert"><span class="ic" data-i="triangle-alert"></span>추석 연휴 동안 미국 10년물 5.21%까지 상승<span class="muted">→ 연휴 뒤 국내 금리도 출렁일 수 있음</span></div>
+  </section>
+
+  <!-- ================= 정리 ================= -->
+  <section class="scene" id="s-summary">
+    <div class="header"><span class="badge gray">정리</span><div class="h1">한눈에 보기</div></div>
+    <div class="card sumrow" id="sum1"><span class="k">이유</span>
+      <div class="chips"><span class="tag red" id="sc1">물가·기준금리 인상</span><span class="tag red" id="sc2">유가 100달러</span><span class="tag red" id="sc3">미국 금리 5%</span><span class="tag red" id="sc4">글로벌 긴축·외국인 매도</span></div></div>
+    <div class="card sumrow" id="sum2"><span class="k">의미</span><span class="big">돈 빌리는 비용 <span class="up">▲</span></span>
+      <div class="chips" style="margin-left:auto"><span class="tag">대출이자 ▲</span><span class="tag teal">예금이자 ▲</span><span class="tag">자산시장·재정 부담</span></div></div>
+    <div class="card sumrow" id="sum3"><span class="k">체크</span><span class="big">내 대출의 금리 유형(고정·변동)과 상환 계획 점검</span></div>
+    <div id="endcard">
+      <div class="t">국채금리, 왜 이렇게 높을까?</div>
+      <div class="d">2026년 9월 28일까지 공개된 자료와 보도를 바탕으로 정리했습니다.<br>특정 상품의 투자 권유가 아닙니다.</div>
+      <div class="s">자료: 한국은행 · 통계청 · 금융투자협회 · 정부 2027년 예산안 · 미국 연준 · 일본은행 · 국내외 언론 보도 종합</div>
+    </div>
+  </section>
+
+  <!-- ================= 공통 UI ================= -->
+  <div id="brand"><i></i>경제 이슈 쉽게 보기</div>
+  <div id="nav"><span data-ch="개념">개념</span><span data-ch="현황">현황</span><span data-ch="이유">이유</span><span data-ch="의미">의미</span><span data-ch="전망">전망</span><span data-ch="정리">정리</span></div>
+  <div id="progress-track"><div id="progress"></div></div>
+  <div id="captions"></div>
+</div>
+
+<script src="node_modules/gsap/dist/gsap.min.js"></script>
+<script src="build/timeline.js"></script>
+<script src="scenes.js"></script>
+</body>
+</html>
