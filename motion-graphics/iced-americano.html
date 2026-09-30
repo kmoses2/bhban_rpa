@@ -1,0 +1,2108 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>아이스 아메리카노 손그림</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&display=swap">
+<style>
+  :root {
+    --page: #e8e1d5;
+    --panel: rgba(255, 255, 255, 0.55);
+    --ink: #2e2622;
+    --muted: #75685d;
+    --accent: #b2432f;
+    --shadow: 0 16px 44px rgba(64, 40, 20, 0.28);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --page: #1c1613;
+      --panel: rgba(255, 255, 255, 0.07);
+      --ink: #efe6d8;
+      --muted: #a89a8b;
+      --accent: #e0765c;
+      --shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --page: #1c1613;
+    --panel: rgba(255, 255, 255, 0.07);
+    --ink: #efe6d8;
+    --muted: #a89a8b;
+    --accent: #e0765c;
+    --shadow: 0 16px 44px rgba(0, 0, 0, 0.55);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--page);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px;
+    overflow: hidden;
+  }
+  #film {
+    display: block;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    background: #cdbb9e;
+    touch-action: none;
+  }
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 14px 6px 6px;
+    border-radius: 999px;
+    background: var(--panel);
+    max-width: 100%;
+  }
+  .bar button {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--page);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+  }
+  .bar button:focus-visible, .bar input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .bar svg { width: 16px; height: 16px; fill: currentColor; }
+  .bar input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); cursor: pointer; }
+  .bar output {
+    flex: none;
+    min-width: 76px;
+    text-align: right;
+    font-size: 13px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+</style>
+</head>
+<body>
+<canvas id="film" width="1080" height="1920" aria-label="아이스 아메리카노 한 잔이 되기까지, 손그림 모션그래픽"></canvas>
+<div class="bar" id="bar">
+  <button id="playBtn" type="button" aria-label="일시정지">
+    <svg id="icoPause" viewBox="0 0 16 16"><rect x="3" y="2" width="3.6" height="12" rx="1"/><rect x="9.4" y="2" width="3.6" height="12" rx="1"/></svg>
+    <svg id="icoPlay" viewBox="0 0 16 16" style="display:none"><path d="M4 2.2v11.6c0 .7.8 1.1 1.4.7l8.6-5.8c.5-.3.5-1.1 0-1.4L5.4 1.5C4.8 1.1 4 1.5 4 2.2z"/></svg>
+  </button>
+  <input id="scrub" type="range" min="0" max="22" step="0.01" value="0" aria-label="재생 위치">
+  <output id="clock">0.00 / 22.00</output>
+</div>
+
+<script>
+'use strict';
+/* =======================================================================
+   아이스 아메리카노 — 손그림 모션그래픽
+   세로 1080×1920 · 22초 · 반복
+   모든 움직임은 render(t) 하나로 계산한다. 같은 t(초)면 언제나 같은 그림이 나온다.
+   ======================================================================= */
+
+/* ───────────────────────────── 1. 문구 ───────────────────────────── */
+const TEXT = {
+  font: '"GaeguEmbed", "Gaegu", cursive',
+  charsPerSec: 10,                        // 1초에 10칸씩, 계단처럼 써진다
+  title:     { text: '아이스 아메리카노', x: 540, y: 335,  size: 106, t: 0.0 },
+  subtitle:  { text: '한 잔이 되기까지',  x: 540, y: 508,  size: 58,  t: 0.9 },
+  steps: [
+    { num: '1', text: '볶은 원두',       x: 430, y: 1375, size: 74, t: 3.05 },
+    { num: '2', text: '곱게 갈기',       x: 760, y: 2235, size: 74, t: 6.3 },
+    { num: '3', text: '에스프레소 추출', x: 450, y: 3122, size: 64, t: 10.6 },
+    { num: '4', text: '얼음 + 찬물',     x: 812, y: 3412, size: 62, t: 14.45 },
+    { num: '5', text: '완성!',           x: 620, y: 4222, size: 76, t: 17.3 },
+  ],
+  endTitle:  { text: '아이스 아메리카노', x: 620, y: 4340, size: 98, t: 20.15 },
+  signature: { text: '손그림 커피 노트',  x: 620, y: 4418, size: 34, t: 20.75 },
+};
+
+/* ───────────────────────────── 2. 색 ───────────────────────────── */
+const COLOR = {
+  paper: '#ECE6DA',                         // 크림색 종이
+  gridMinor: 'rgba(28, 126, 126, 0.10)',    // 40칸 청록 모눈 (아주 옅게)
+  gridMajor: 'rgba(28, 126, 126, 0.22)',    // 200칸마다 조금 진하게
+  desk: '#CDBB9E',                          // 종이 뒤 책상
+  vignette: '78, 47, 22',                   // 화면 가장자리 갈색 (r, g, b)
+  pencil: '#2E2622',                        // 연필 선
+  bean: '#6B4127',                          // 원두
+  beanCrease: '#3A2215',                    // 원두 골
+  grounds: '#5A3620',                       // 가루
+  crema: '#C58E57',                         // 크레마
+  espresso: '#3A2215',                      // 에스프레소 (원두 골과 같은 진한 갈색)
+  ice: '#CEE8F4',                           // 얼음 하늘색
+  iceEdge: '#4F7F9A',                       // 얼음 테두리
+  water: 'rgba(186, 222, 240, 0.55)',       // 찬물 (아주 옅은 파랑)
+  coffee: '#4A2A17',                        // 커피 (진한 갈색)
+  highlighter: 'rgba(255, 221, 51, 0.66)',  // 형광 노랑 밑줄
+  check: '#B2432F',                         // 빨간 체크
+  retrace: '#8C5732',                       // 경로선 갈색 덧칠
+};
+
+/* ─────────────────────────── 3. 장면 시간표 (초) ─────────────────────────── */
+const SCENE = {
+  underline:     [0.50, 0.90],   // 제목 밑줄 긋기
+  beanDrop:      [0.90, 1.28],   // 원두 한 알 낙하 → 밑줄에 착지
+  beanSettle:    [1.28, 1.62],   // 찌그러졌다 튕기며 자리 잡기
+  beanRoll:      [1.62, 2.05],   // 오른쪽으로 굴러감
+  beanPath:      [2.05, 2.90],   // 연필 경로선을 따라 그릇으로
+  bowlDraw:      [2.05, 2.55],   // 그릇 그리기
+  pilePop:       [2.30, 2.95],   // 원두 더미 톡톡
+  steam:         3.30,           // 김 모락모락 시작
+  bowlPour:      [4.15, 4.55],   // 그릇 기울여 원두 쏟기
+  grinderDraw:   [4.45, 5.45],   // 핸드 그라인더 그리기
+  crank:         [5.75, 7.65],   // 손잡이 두 바퀴 넘게
+  grounds:       [6.05, 8.10],   // 가루 → 포터필터
+  machineDraw:   [8.25, 9.05],   // 에스프레소 머신 헤드
+  tamp:          [8.95, 9.74],   // 탬퍼 꾹
+  lockIn:        [9.72, 10.00],  // 포터필터 딸깍 장착
+  shotGlassDraw: [9.80, 10.12],  // 샷잔 그리기
+  extract:       [10.15, 11.75], // 에스프레소 두 줄기
+  shotWalk:      [12.00, 12.62], // 샷잔이 걸어 내려감
+  glassDraw:     [12.30, 12.95], // 큰 유리잔 그리기
+  ice:           [13.10, 13.45, 13.80], // 얼음 세 개
+  water:         [14.20, 15.15], // 찬물 줄기
+  pour:          [15.35, 16.95], // 샷잔 기울여 붓기
+  straw:         [17.25, 17.55], // 빨대 꽂기
+  condense:      [17.55, 18.15], // 잔 표면 물방울
+  retrace:       [18.35, 19.35], // 경로선 전체 갈색 덧칠
+  checks:        [18.95, 19.45], // ①~④ 빨간 체크
+};
+
+/* ─────────────────────────── 4. 카메라 ───────────────────────────
+   시각(t)에 바라보는 곳(x, y)과 확대(zoom). move = 이 키까지 움직이는 방식
+   slow  천천히 — 부드럽게 다가감
+   whip  휙 — 짧고 빠르게 가서 도착하면 살짝 멈칫 (이때만 모션 블러)
+   accel 가속 — 점점 빨라지다 짧게 멈춤
+   snap  확 줌인 — 한순간에 당김 */
+const CAMERA = [
+  { t: 0.00,  x: 520, y: 380,  zoom: 1.42 },
+  { t: 1.90,  x: 545, y: 470,  zoom: 1.26, move: 'slow' },
+  { t: 2.55,  x: 445, y: 1060, zoom: 1.16, move: 'whip' },
+  { t: 4.35,  x: 450, y: 1070, zoom: 1.24, move: 'slow' },
+  { t: 5.10,  x: 640, y: 1890, zoom: 1.20, move: 'accel' },
+  { t: 7.75,  x: 650, y: 1930, zoom: 1.31, move: 'slow' },
+  { t: 8.30,  x: 450, y: 2790, zoom: 1.15, move: 'whip' },
+  { t: 10.00, x: 445, y: 2805, zoom: 1.23, move: 'slow' },
+  { t: 10.45, x: 448, y: 2960, zoom: 1.55, move: 'snap' },
+  { t: 11.95, x: 448, y: 2972, zoom: 1.63, move: 'slow' },
+  { t: 12.60, x: 620, y: 3790, zoom: 1.06, move: 'whip' },
+  { t: 15.30, x: 622, y: 3800, zoom: 1.13, move: 'slow' },
+  { t: 18.25, x: 612, y: 3770, zoom: 1.28, move: 'slow' },
+  { t: 18.85, x: 620, y: 2240, zoom: 0.43, move: 'accel' },   // 종이 전체가 보이게 쭉 빠짐
+  { t: 19.55, x: 620, y: 2230, zoom: 0.45, move: 'slow' },
+  { t: 20.12, x: 620, y: 4000, zoom: 1.07, move: 'snap' },
+  { t: 22.00, x: 620, y: 4010, zoom: 1.12, move: 'slow' },
+];
+const PARALLAX = { pos: 0.82, zoom: 0.72 };          // 종이 뒤 낙서 층: 카메라 이동의 82%, 확대 변화의 72%
+const MOTION_BLUR = { shutter: 1 / 90, maxPx: 80 };  // 휙 구간에서만
+
+/* ─────────────────────────── 5. 무대 · 배치 ─────────────────────────── */
+const STAGE = { w: 1080, h: 1920, duration: 22, boilFps: 12 };
+const PAPER = { w: 1200, h: 4600, grid: 40, major: 200 };
+const PENCIL = { width: 4, jitter: 2, spacing: 9, overlayAlpha: 0.45 };
+const DOODLE = { deskAlpha: 0.30, paperAlpha: 0.06 };
+const PLACE = {
+  underlineY: 398,                 // 제목 밑줄 높이
+  beanLand: { x: 760, y: 378 },    // 원두가 밑줄에 내려앉는 곳
+  bowl: { x: 450, y: 1060 },
+  grinder: { x: 660, y: 1900 },
+  portafilter: { x: 450, y: 2905 },
+  shotGlass: { x: 450, y: 2955 },
+  glass: { x: 640, y: 3830 },
+};
+
+/* =======================================================================
+   여기서부터 엔진
+   ======================================================================= */
+const TAU = Math.PI * 2;
+const clamp = (v, a = 0, b = 1) => (v < a ? a : v > b ? b : v);
+const lerp = (a, b, s) => a + (b - a) * s;
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const E = {
+  inQuad: s => s * s,
+  outQuad: s => 1 - (1 - s) * (1 - s),
+  inCubic: s => s * s * s,
+  outCubic: s => 1 - Math.pow(1 - s, 3),
+  inOutSine: s => 0.5 - 0.5 * Math.cos(Math.PI * s),
+  inOutCubic: s => (s < 0.5 ? 4 * s * s * s : 1 - Math.pow(-2 * s + 2, 3) / 2),
+  smooth: s => s * s * (3 - 2 * s),
+  outBack: (s, k = 1.9) => 1 + (k + 1) * Math.pow(s - 1, 3) + k * Math.pow(s - 1, 2),
+};
+// 앞부분 n승으로 가속해 s=j에서 P만큼 가고, 그 속도를 이어받아 끝에서 멈춘다
+function asym(s, j, P, n) {
+  if (s <= j) return P * Math.pow(s / j, n);
+  const m = (n * P / j) * (1 - j) / (1 - P);
+  return P + (1 - P) * (1 - Math.pow(1 - (s - j) / (1 - j), m));
+}
+// 키프레임 [[시각, 값], ...] 사이를 부드럽게
+function track(t, K) {
+  if (t <= K[0][0]) return K[0][1];
+  for (let i = 1; i < K.length; i++) {
+    if (t <= K[i][0]) return lerp(K[i - 1][1], K[i][1], E.smooth((t - K[i - 1][0]) / (K[i][0] - K[i - 1][0])));
+  }
+  return K[K.length - 1][1];
+}
+function hash(a, b = 0, c = 0) {
+  let h = (Math.imul(a | 0, 374761393) + Math.imul(b | 0, 668265263) + Math.imul(c | 0, 2147483647)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/* ───────── 도형 점 만들기 ───────── */
+function ellipsePts(cx, cy, rx, ry, a0 = 0, a1 = TAU, n = 48) {
+  const o = [];
+  for (let i = 0; i <= n; i++) {
+    const a = lerp(a0, a1, i / n);
+    o.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+  }
+  return o;
+}
+function roundRectPts(x0, y0, x1, y1, r, n = 5) {
+  const o = [];
+  const corner = (cx, cy, a0) => {
+    for (let i = 0; i <= n; i++) {
+      const a = a0 + (i / n) * (Math.PI / 2);
+      o.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
+    }
+  };
+  corner(x0 + r, y0 + r, Math.PI);
+  corner(x1 - r, y0 + r, -Math.PI / 2);
+  corner(x1 - r, y1 - r, 0);
+  corner(x0 + r, y1 - r, Math.PI / 2);
+  return o;
+}
+function catmull(pts, n = 12) {
+  if (pts.length < 3) return pts.map(p => p.slice());
+  const P = [pts[0], ...pts, pts[pts.length - 1]], out = [];
+  for (let i = 1; i < P.length - 2; i++) {
+    const p0 = P[i - 1], p1 = P[i], p2 = P[i + 1], p3 = P[i + 2];
+    for (let k = 0; k < n; k++) {
+      const s = k / n, s2 = s * s, s3 = s2 * s;
+      const f = d => 0.5 * (2 * p1[d] + (-p0[d] + p2[d]) * s + (2 * p0[d] - 5 * p1[d] + 4 * p2[d] - p3[d]) * s2 + (-p0[d] + 3 * p1[d] - 3 * p2[d] + p3[d]) * s3);
+      out.push([f(0), f(1)]);
+    }
+  }
+  out.push(pts[pts.length - 1].slice());
+  return out;
+}
+function teardropPts(w, h, n = 22) {    // 위가 뾰족한 물방울
+  const o = [];
+  for (let i = 0; i < n; i++) {
+    const a = (i / n) * TAU;
+    o.push([w * Math.sin(a) * Math.sin(a / 2), -0.5 * h * Math.cos(a)]);
+  }
+  return o;
+}
+
+/* ───────── 연필 선 ─────────
+   점을 이어 그리되 점마다 좌우로 2px쯤 흔든다. 흔들림만 다른 3벌을 1초에 12번 번갈아 보여 준다.
+   진한 선(굵기 4) 위에 절반 굵기 · 45% 선을 한 번 더 겹친다. p(0→1)로 한쪽 끝부터 그어진다. */
+const FRAME = { t: 0, boil: 0 };
+let seedCounter = 1;
+function resample(pts, step, closed) {
+  const P = closed ? pts.concat([pts[0]]) : pts;
+  const L = [0];
+  for (let i = 1; i < P.length; i++) L.push(L[i - 1] + Math.hypot(P[i][0] - P[i - 1][0], P[i][1] - P[i - 1][1]));
+  const total = L[L.length - 1];
+  const n = Math.max(2, Math.round(total / step) + 1);
+  const out = new Float32Array(n * 2);
+  let j = 1;
+  for (let i = 0; i < n; i++) {
+    const d = (total * i) / (n - 1);
+    while (j < P.length - 1 && L[j] < d) j++;
+    const s = clamp((d - L[j - 1]) / ((L[j] - L[j - 1]) || 1));
+    out[i * 2] = lerp(P[j - 1][0], P[j][0], s);
+    out[i * 2 + 1] = lerp(P[j - 1][1], P[j][1], s);
+  }
+  return out;
+}
+function jitterPts(base, seed, variant, J, closed) {
+  const n = base.length / 2, out = new Float32Array(base.length);
+  for (let i = 0; i < n; i++) {
+    const i0 = Math.max(0, i - 1), i1 = Math.min(n - 1, i + 1);
+    let tx = base[i1 * 2] - base[i0 * 2], ty = base[i1 * 2 + 1] - base[i0 * 2 + 1];
+    const tl = Math.hypot(tx, ty) || 1;
+    tx /= tl; ty /= tl;
+    const jn = (hash(seed, i, variant) * 2 - 1) * J;
+    const jt = (hash(seed, i, variant + 11) * 2 - 1) * J * 0.3;
+    out[i * 2] = base[i * 2] - ty * jn + tx * jt;
+    out[i * 2 + 1] = base[i * 2 + 1] + tx * jn + ty * jt;
+  }
+  if (closed) { out[(n - 1) * 2] = out[0]; out[(n - 1) * 2 + 1] = out[1]; }
+  return out;
+}
+function withLengths(xy) {
+  const n = xy.length / 2, len = new Float32Array(n);
+  for (let i = 1; i < n; i++) len[i] = len[i - 1] + Math.hypot(xy[i * 2] - xy[i * 2 - 2], xy[i * 2 + 1] - xy[i * 2 - 1]);
+  return { xy, len, total: len[n - 1] };
+}
+class Stroke {
+  constructor(pts, o = {}) {
+    this.closed = !!o.closed;
+    this.width = o.width ?? PENCIL.width;
+    this.color = o.color ?? COLOR.pencil;
+    this.dash = o.dash ?? null;
+    this.overlay = o.overlay ?? true;
+    const seed = o.seed ?? (seedCounter++ * 7919);
+    const base = resample(pts, o.spacing ?? PENCIL.spacing, this.closed);
+    const J = o.jitter ?? PENCIL.jitter;
+    this.v = [0, 1, 2].map(k => withLengths(jitterPts(base, seed, k, J, this.closed)));
+  }
+}
+const S = (pts, o) => new Stroke(pts, o);
+
+function tracePath(g, v, p0, p1, closed) {
+  const { xy, len, total } = v, n = len.length;
+  const a = total * p0, b = total * p1;
+  let i = 1;
+  while (i < n - 1 && len[i] < a) i++;
+  const sa = clamp((a - len[i - 1]) / ((len[i] - len[i - 1]) || 1));
+  g.moveTo(lerp(xy[i * 2 - 2], xy[i * 2], sa), lerp(xy[i * 2 - 1], xy[i * 2 + 1], sa));
+  for (; i < n; i++) {
+    if (len[i] >= b && p1 < 1) {
+      const sb = clamp((b - len[i - 1]) / ((len[i] - len[i - 1]) || 1));
+      g.lineTo(lerp(xy[i * 2 - 2], xy[i * 2], sb), lerp(xy[i * 2 - 1], xy[i * 2 + 1], sb));
+      return;
+    }
+    g.lineTo(xy[i * 2], xy[i * 2 + 1]);
+  }
+  if (closed && p0 <= 0) g.closePath();
+}
+function strokeVariants(g, v0, v1, p0, p1, closed, o) {
+  const w = o.width, a = o.alpha;
+  g.lineCap = o.cap || 'round';
+  g.lineJoin = 'round';
+  g.strokeStyle = o.color;
+  if (o.dash) g.setLineDash(o.dash);
+  g.globalAlpha = a;
+  g.lineWidth = w;
+  g.beginPath(); tracePath(g, v0, p0, p1, closed); g.stroke();
+  if (v1) {
+    g.globalAlpha = a * PENCIL.overlayAlpha;
+    g.lineWidth = w * 0.5;
+    g.beginPath(); tracePath(g, v1, p0, p1, closed); g.stroke();
+  }
+  if (o.dash) g.setLineDash([]);
+  g.globalAlpha = 1;
+}
+// 미리 만든 선 그리기
+function draw(g, s, p = 1, o = {}) {
+  if (!s || p <= 0) return;
+  const p0 = o.from ?? 0, p1 = Math.min(1, p);
+  if (p1 <= p0) return;
+  const f = FRAME.boil;
+  strokeVariants(g, s.v[f], s.overlay && o.overlay !== false ? s.v[(f + 1) % 3] : null, p0, p1, s.closed, {
+    width: o.width ?? s.width, alpha: o.alpha ?? 1, color: o.color ?? s.color,
+    dash: o.dash !== undefined ? o.dash : s.dash, cap: o.cap,
+  });
+}
+function fill(g, s, style, alpha = 1) {
+  g.globalAlpha = alpha;
+  g.fillStyle = style;
+  g.beginPath(); tracePath(g, s.v[FRAME.boil], 0, 1, true); g.fill();
+  g.globalAlpha = 1;
+}
+// 매 프레임 모양이 바뀌는 선 (같은 규칙으로 즉석에서 흔든다)
+function live(g, pts, o = {}) {
+  if (pts.length < 2) return;
+  const closed = !!o.closed, f = FRAME.boil, seed = o.seed ?? 1, J = o.jitter ?? PENCIL.jitter;
+  const base = resample(pts, o.spacing ?? PENCIL.spacing, closed);
+  const v0 = withLengths(jitterPts(base, seed, f, J, closed));
+  if (o.fill) {
+    g.globalAlpha = (o.fillAlpha ?? 1) * (o.alpha ?? 1);
+    g.fillStyle = o.fill;
+    g.beginPath(); tracePath(g, v0, 0, 1, true); g.fill();
+    g.globalAlpha = 1;
+  }
+  if (o.stroke === false) return;
+  const p = o.p ?? 1, p0 = o.from ?? 0;
+  if (p <= p0) return;
+  const v1 = o.overlay === false ? null : withLengths(jitterPts(base, seed, (f + 1) % 3, J, closed));
+  strokeVariants(g, v0, v1, p0, Math.min(1, p), closed, {
+    width: o.width ?? PENCIL.width, alpha: o.alpha ?? 1, color: o.color ?? COLOR.pencil, dash: o.dash, cap: o.cap,
+  });
+}
+
+/* ───────── 종이 · 모눈 ─────────
+   종이는 크림색 + 모눈 선을 매 프레임 보이는 만큼만 긋는다.
+   물체 안쪽을 '종이로 가릴' 때는 같은 모눈을 담은 무늬(200×200, 2배 해상도)로 채워 모눈이 이어져 보이게 한다. */
+const TILE_RES = 2;
+let PAPER_PATTERN = null;
+let CAM_M = new DOMMatrix(), CAM_INV = new DOMMatrix();
+const TILE_SCALE = new DOMMatrix([1 / TILE_RES, 0, 0, 1 / TILE_RES, 0, 0]);
+function makePaperPattern(g) {
+  const T = PAPER.major, R = TILE_RES;
+  const c = document.createElement('canvas');
+  c.width = c.height = T * R;
+  const x = c.getContext('2d');
+  x.fillStyle = COLOR.paper;
+  x.fillRect(0, 0, T * R, T * R);
+  x.scale(R, R);
+  x.strokeStyle = COLOR.gridMinor;
+  x.lineWidth = 1.3;
+  x.beginPath();
+  for (let k = PAPER.grid; k < T; k += PAPER.grid) { x.moveTo(k, 0); x.lineTo(k, T); x.moveTo(0, k); x.lineTo(T, k); }
+  x.stroke();
+  x.strokeStyle = COLOR.gridMajor;
+  x.lineWidth = 1.8;
+  x.beginPath();
+  for (const k of [0, T]) { x.moveTo(k, 0); x.lineTo(k, T); x.moveTo(0, k); x.lineTo(T, k); }
+  x.stroke();
+  return g.createPattern(c, 'repeat');
+}
+// 지금 좌표계(물체의 이동 · 회전 포함)에서도 종이 모눈과 딱 맞는 무늬
+function paperStyle(g) {
+  const local = CAM_INV.multiply(g.getTransform());
+  PAPER_PATTERN.setTransform(local.inverse().multiply(TILE_SCALE));
+  return PAPER_PATTERN;
+}
+// 화면 위에 얹는 층: 가장자리 갈색 비네트 + 아주 옅은 종이 결(3벌을 연필 선과 같은 박자로 바꿔 끼움)
+function makeGrainTile(seed) {
+  const N = 256, c = document.createElement('canvas');
+  c.width = c.height = N;
+  const x = c.getContext('2d'), img = x.createImageData(N, N), d = img.data, r = rng(seed);
+  for (let i = 0; i < d.length; i += 4) {
+    const n = r(), v = n < 0.5 ? 0 : 255;
+    d[i] = d[i + 1] = d[i + 2] = v;
+    d[i + 3] = Math.abs(n - 0.5) * 2 * (v ? 7 : 10);
+  }
+  x.putImageData(img, 0, 0);
+  return c;
+}
+function makeOverlay(k, w, h) {
+  const c = makeVignette(w, h), g = c.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.fillStyle = g.createPattern(makeGrainTile(900 + k), 'repeat');
+  g.fillRect(0, 0, w, h);
+  return c;
+}
+function makeVignette(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const g = c.getContext('2d');
+  g.translate(w / 2, h / 2);
+  g.scale(1, h / w);
+  const R = w * 0.8;
+  const gr = g.createRadialGradient(0, 0, R * 0.38, 0, 0, R);
+  gr.addColorStop(0, `rgba(${COLOR.vignette}, 0)`);
+  gr.addColorStop(0.55, `rgba(${COLOR.vignette}, 0.07)`);
+  gr.addColorStop(1, `rgba(${COLOR.vignette}, 0.42)`);
+  g.fillStyle = gr;
+  g.fillRect(-w, -w, w * 2, w * 2);
+  return c;
+}
+
+/* ───────── 카메라 ───────── */
+const MOVES = {
+  whip: s => {                         // 짧고 빠르게 → 살짝 지나쳤다가 멈칫
+    const a = 0.62, over = 0.035;
+    if (s < a) return (1 + over) * E.inOutCubic(s / a);
+    return 1 + over * (1 - E.inOutSine((s - a) / (1 - a)));
+  },
+  accel: s => asym(s, 0.72, 0.8, 3),   // 천천히 출발 → 점점 빨라짐 → 짧게 멈춤
+  snap: s => {                         // 한순간에 당기고 살짝 되돌아옴
+    const a = 0.3, over = 0.02;
+    if (s < a) return (1 + over) * asym(s / a, 0.28, 0.45, 2);
+    return 1 + over * (1 - E.inOutSine((s - a) / (1 - a)));
+  },
+  slow: E.inOutSine,
+};
+// '천천히'가 이어지는 키에서는 속도를 이어 붙인다 (Catmull-Rom 접선)
+const CAM_TAN = CAMERA.map((k, j) => {
+  const a = CAMERA[j - 1], b = CAMERA[j + 1];
+  if (!a || !b || k.move !== 'slow' || b.move !== 'slow') return { x: 0, y: 0, z: 0 };
+  const dt = b.t - a.t;
+  return { x: (b.x - a.x) / dt, y: (b.y - a.y) / dt, z: (Math.log(b.zoom) - Math.log(a.zoom)) / dt };
+});
+function camAt(t) {
+  const K = CAMERA;
+  t = clamp(t, K[0].t, K[K.length - 1].t);
+  let i = 1;
+  while (i < K.length - 1 && t > K[i].t) i++;
+  const a = K[i - 1], b = K[i], dt = b.t - a.t, s = clamp((t - a.t) / dt);
+  const la = Math.log(a.zoom), lb = Math.log(b.zoom);
+  if (b.move === 'slow') {
+    const s2 = s * s, s3 = s2 * s;
+    const h00 = 2 * s3 - 3 * s2 + 1, h10 = s3 - 2 * s2 + s, h01 = -2 * s3 + 3 * s2, h11 = s3 - s2;
+    const m0 = CAM_TAN[i - 1], m1 = CAM_TAN[i];
+    const H = (v0, v1, t0, t1) => h00 * v0 + h10 * dt * t0 + h01 * v1 + h11 * dt * t1;
+    return { x: H(a.x, b.x, m0.x, m1.x), y: H(a.y, b.y, m0.y, m1.y), z: Math.exp(H(la, lb, m0.z, m1.z)), move: b.move };
+  }
+  const p = MOVES[b.move](s);
+  return { x: lerp(a.x, b.x, p), y: lerp(a.y, b.y, p), z: Math.exp(lerp(la, lb, p)), move: b.move };
+}
+function layerCam(c) {                 // 낙서 층: 카메라보다 느리게
+  const ax = PAPER.w / 2, ay = PAPER.h / 2;
+  return { x: ax + (c.x - ax) * PARALLAX.pos, y: ay + (c.y - ay) * PARALLAX.pos, z: Math.exp(Math.log(c.z) * PARALLAX.zoom) };
+}
+let RES = 1;                            // 실제 캔버스 픽셀 / 1080 (화면에 보이는 크기에 맞춤)
+function applyCam(g, c) {
+  const k = c.z * RES;
+  g.setTransform(k, 0, 0, k, (STAGE.w / 2 - c.x * c.z) * RES, (STAGE.h / 2 - c.y * c.z) * RES);
+}
+function blurFor(t) {
+  const c = camAt(t);
+  if (c.move !== 'whip') return null;
+  const h = 1 / 240, a = camAt(t - h), b = camAt(t + h);
+  let dx = (-(b.x - a.x) / (2 * h)) * c.z * MOTION_BLUR.shutter;
+  let dy = (-(b.y - a.y) / (2 * h)) * c.z * MOTION_BLUR.shutter;
+  const L = Math.hypot(dx, dy);
+  if (L < 1.5) return null;
+  if (L > MOTION_BLUR.maxPx) { dx *= MOTION_BLUR.maxPx / L; dy *= MOTION_BLUR.maxPx / L; }
+  return { dx, dy, L: Math.min(L, MOTION_BLUR.maxPx) };
+}
+
+/* ───────── 글자 ───────── */
+const TEXT_JIT = [[0, 0, 0], [0.9, -0.7, 0.0035], [-0.7, 0.8, -0.003]];
+let FONT_EPOCH = 0;
+const widthCache = new Map();
+function fontOf(size) { return `700 ${size}px ${TEXT.font}`; }
+function textWidth(g, text, size) {
+  const key = `${FONT_EPOCH}|${size}|${text}`;
+  let w = widthCache.get(key);
+  if (w === undefined) {
+    g.save(); g.font = fontOf(size); w = g.measureText(text).width; g.restore();
+    widthCache.set(key, w);
+  }
+  return w;
+}
+// 왼쪽부터 한 칸씩 써진다. 다 써진 시각을 돌려준다
+function write(g, text, x, y, size, t0, t, o = {}) {
+  if (t < t0) return null;
+  const chars = Array.from(text);
+  const k = Math.min(chars.length, Math.floor((t - t0) * TEXT.charsPerSec + 1e-6) + 1);
+  const w = textWidth(g, text, size);
+  const left = o.align === 'left' ? x : x - w / 2;
+  const j = TEXT_JIT[(FRAME.boil + (o.seed || 0)) % 3];
+  g.save();
+  g.translate(left + w / 2 + j[0], y + j[1]);
+  g.rotate(j[2]);
+  g.font = fontOf(size);
+  g.textAlign = 'left';
+  g.textBaseline = 'middle';
+  g.fillStyle = o.color || COLOR.pencil;
+  g.globalAlpha = o.alpha ?? 1;
+  g.fillText(chars.slice(0, k).join(''), -w / 2, 0);
+  g.restore();
+  return { left, right: left + w, done: t0 + chars.length / TEXT.charsPerSec };
+}
+
+/* =======================================================================
+   장면 재료
+   ======================================================================= */
+/* ───────── 원두 ───────── */
+function makeBean(rx, ry, seed) {
+  const outline = [];
+  for (let i = 0; i < 40; i++) {
+    const a = (i / 40) * TAU;
+    outline.push([rx * Math.cos(a) * (1 + 0.05 * Math.sin(a)), ry * Math.sin(a) * (1 - 0.05 * Math.cos(2 * a))]);
+  }
+  const crease = [];
+  for (let i = 0; i <= 14; i++) {
+    const u = (i / 14) * 2 - 1;
+    crease.push([u * rx * 0.72, ry * 0.2 * Math.sin(u * Math.PI) - ry * 0.03]);
+  }
+  return {
+    rx, ry,
+    outline: S(outline, { closed: true, seed: seed * 31 }),
+    crease: S(crease, { seed: seed * 31 + 7, width: rx > 28 ? 5 : 4.2, color: COLOR.beanCrease, jitter: 1.1 }),
+  };
+}
+const BEANS = { hero: makeBean(31, 21, 11), small: [0, 1, 2, 3, 4].map(k => makeBean(24, 16.5, 20 + k)) };
+function drawBean(g, b, x, y, rot = 0, sx = 1, sy = 1, alpha = 1) {
+  g.save();
+  g.translate(x, y); g.rotate(rot); g.scale(sx, sy);
+  fill(g, b.outline, COLOR.bean, alpha);
+  draw(g, b.crease, 1, { alpha });
+  draw(g, b.outline, 1, { alpha });
+  g.restore();
+}
+const supportH = (b, rot) => Math.hypot(b.rx * Math.sin(rot), b.ry * Math.cos(rot));  // 굴러갈 때 바닥에서 중심까지
+
+/* ───────── 경로선 ───────── */
+class Route {
+  constructor(pts, seed) {
+    this.pts = pts;
+    const L = [0];
+    for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    this.L = L;
+    this.total = L[L.length - 1];
+    this.line = S(pts, { dash: [16, 12], seed, jitter: 1.5, width: 3.6 });
+    this.brown = S(pts, { color: COLOR.retrace, width: 6.5, seed: seed + 3, jitter: 2 });
+  }
+  at(f) {
+    const d = clamp(f) * this.total, L = this.L;
+    let lo = 0, hi = L.length - 1;
+    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (L[m] < d) lo = m; else hi = m; }
+    const s = (d - L[lo]) / ((L[hi] - L[lo]) || 1), a = this.pts[lo], b = this.pts[hi];
+    return { x: lerp(a[0], b[0], s), y: lerp(a[1], b[1], s), ang: Math.atan2(b[1] - a[1], b[0] - a[0]) };
+  }
+}
+const ROUTE = {};
+function buildRoutes() {
+  // ① 밑줄 끝 → 고리 한 바퀴 → 그릇 위
+  const pre = catmull([[900, 377], [918, 404], [922, 452], [908, 514], [882, 576], [858, 628], [848, 656], [840, 662]], 10);
+  const loop = [];
+  for (let i = 1; i <= 64; i++) {
+    const ph = (i / 64) * TAU;
+    loop.push([840 - 10 * ph - 60 * Math.sin(ph), 602 + 60 * Math.cos(ph)]);
+  }
+  const post = catmull([[777, 662], [742, 668], [662, 702], [578, 760], [512, 828], [472, 876], [453, 902]], 10);
+  ROUTE.bean = new Route([...pre, ...loop, ...post.slice(1)], 101);
+  // 그릇 → 그라인더 (원두가 쏟아지는 포물선)
+  const arc = [];
+  for (let i = 0; i <= 56; i++) {
+    const s = i / 56;
+    arc.push([lerp(598, 660, s) + 95 * Math.sin(Math.PI * s), lerp(968, 1792, s) - 4 * 270 * s * (1 - s)]);
+  }
+  ROUTE.pour = new Route(arc, 131);
+  // 그라인더 아래 → 포터필터
+  ROUTE.grounds = new Route(catmull([[660, 2050], [654, 2092], [612, 2140], [548, 2195], [536, 2262], [578, 2335], [652, 2410], [690, 2515], [688, 2630], [660, 2735], [600, 2815], [520, 2860], [455, 2880]], 12), 151);
+  // 샷잔이 걸어 내려가는 길
+  ROUTE.walk = new Route(catmull([[450, 2998], [360, 3012], [238, 3050], [158, 3120], [146, 3210], [198, 3300], [290, 3385], [343, 3480], [347, 3590], [337, 3700], [350, 3820], [383, 3930], [410, 4020]], 12), 171);
+}
+
+/* ───────── 그릇 ───────── */
+const BOWL = {};
+function buildBowl() {
+  const cx = PLACE.bowl.x, rimY = PLACE.bowl.y - 52, rx = 152, ry = 26, depth = 104;
+  BOWL.pivot = [cx + rx, rimY];
+  BOWL.rimBack = S(ellipsePts(cx, rimY, rx, ry, Math.PI, TAU, 40));
+  const front = ellipsePts(cx, rimY, rx, ry, 0, Math.PI, 40);
+  BOWL.rimFront = S(front);
+  const body = [];
+  for (let i = 0; i <= 40; i++) {
+    const a = (i / 40) * Math.PI;
+    body.push([cx + rx * Math.cos(a), rimY + depth * Math.pow(Math.sin(a), 0.9)]);
+  }
+  BOWL.body = S(body);
+  BOWL.occ = S([...front, ...body.slice().reverse()], { closed: true });
+  BOWL.foot = S([[cx - 46, rimY + depth - 5], [cx - 52, rimY + depth + 20], [cx + 52, rimY + depth + 20], [cx + 46, rimY + depth - 5]]);
+  BOWL.band = S(ellipsePts(cx, rimY + 6, rx - 11, depth - 40, 0.17 * Math.PI, 0.83 * Math.PI, 30), { width: 3.4 });
+  // 더미 원두 [x, y, 회전]
+  BOWL.pile = [
+    [372, 998, -0.5], [413, 1000, 0.3], [454, 999, -0.2], [495, 1000, 0.6], [536, 997, -0.4],
+    [392, 976, 0.2], [433, 977, -0.6], [474, 976, 0.4], [515, 975, -0.1],
+    [412, 955, -0.3], [453, 954, 0.5], [494, 955, -0.5],
+    [433, 934, 0.1], [474, 934, -0.4],
+  ];
+  BOWL.heroRest = { x: 453, y: 902 };
+}
+function bowlTilt(t) {
+  const [a, b] = SCENE.bowlPour;
+  return 0.55 * E.inOutCubic(seg(t, a, a + 0.17)) * (1 - E.inOutCubic(seg(t, b + 0.07, b + 0.35)));
+}
+function bowlXform(t, x, y) {          // 그릇 기울기를 적용한 좌표
+  const r = bowlTilt(t), [px, py] = BOWL.pivot, c = Math.cos(r), s = Math.sin(r);
+  return { x: px + (x - px) * c - (y - py) * s, y: py + (x - px) * s + (y - py) * c, r };
+}
+
+/* ───────── 원두 쏟기 (그릇 → 그라인더) ───────── */
+const FLY = [];
+function buildFlights() {
+  const order = BOWL.pile.map((p, i) => ({ i, k: p[0] + (1010 - p[1]) * 0.6 })).sort((a, b) => b.k - a.k);
+  const [a] = SCENE.bowlPour;
+  order.forEach((o, rank) => {
+    const h = k => hash(o.i, k, 991);
+    FLY[o.i] = { L: a + 0.03 + rank * 0.024 + (h(6) - 0.5) * 0.014, D: 0.58 + 0.12 * h(1), B: 55 + 90 * h(2), H: 290 + 150 * h(3), dx: (h(4) - 0.5) * 40, spin: (h(5) - 0.5) * 16 };
+  });
+  FLY.hero = { L: SCENE.bowlPour[1], D: 0.66, B: 96, H: 380, dx: 4, spin: 9.5 };
+}
+function flight(f, t, x0, y0, r0) {
+  const s = (t - f.L) / f.D;
+  if (s < 0 || s >= 1) return null;
+  const tx = PLACE.grinder.x + f.dx, ty = GR.mouthY + 24;
+  return {
+    x: lerp(x0, tx, s) + f.B * Math.sin(Math.PI * s),
+    y: lerp(y0, ty, s) - 4 * f.H * s * (1 - s),
+    rot: r0 + f.spin * s,
+  };
+}
+
+/* ───────── 그라인더 ───────── */
+const GR = {};
+function buildGrinder() {
+  const cx = PLACE.grinder.x;
+  const mouthY = 1776, mrx = 80, mry = 16;
+  GR.mouthY = mouthY;
+  GR.hopperBack = S(ellipsePts(cx, mouthY, mrx, mry, Math.PI, TAU, 36));
+  const rimF = ellipsePts(cx, mouthY, mrx, mry, 0, Math.PI, 36);
+  const sideL = catmull([[cx - mrx, mouthY], [cx - 66, 1800], [cx - 44, 1822]], 6);
+  const sideR = catmull([[cx + mrx, mouthY], [cx + 66, 1800], [cx + 44, 1822]], 6);
+  const bottom = ellipsePts(cx, 1822, 44, 7, Math.PI, 0, 16);
+  GR.hopperRim = S(rimF);
+  GR.hopperSides = [S(sideL), S(sideR)];
+  GR.hopperBottom = S(bottom);
+  GR.hopperOcc = S([...rimF, ...sideL, ...bottom, ...sideR.slice().reverse()], { closed: true });
+  GR.plate = S(roundRectPts(566, 1822, 754, 1842, 5), { closed: true });
+  GR.box = S([[584, 1842], [736, 1842], [740, 2010], [580, 2010]], { closed: true });
+  GR.base = S(roundRectPts(570, 2010, 750, 2024, 4), { closed: true });
+  GR.drawer = S([[610, 1930], [710, 1930], [710, 1980], [610, 1980]], { closed: true });
+  GR.knob = S(ellipsePts(660, 1955, 8, 8, 0, TAU, 16), { closed: true });
+  GR.seam = S([[586, 1905], [737, 1905]], { width: 3.4 });
+  GR.grain = [S(catmull([[600, 1862], [640, 1866], [690, 1860], [720, 1864]], 6), { width: 3 }),
+              S(catmull([[598, 1996], [630, 1992], [662, 1997]], 5), { width: 3 })];
+  GR.spout = S([[648, 2024], [652, 2046], [668, 2046], [672, 2024]]);
+  GR.shaft = [S([[655, 1778], [655, 1730]]), S([[665, 1778], [665, 1730]])];
+  GR.pivot = [660, 1726];
+  GR.cap = S(ellipsePts(660, 1726, 9, 4, 0, TAU, 14), { closed: true });
+  GR.arm = S(roundRectPts(-5, -5, 100, 5, 4, 3), { closed: true });       // 손잡이 팔 (x축 방향 96)
+  GR.stick = S([[0, 2], [0, -30]]);
+  GR.knobTop = S(ellipsePts(0, -44, 11, 15, 0, TAU, 20), { closed: true });
+  const arrow = ellipsePts(660, 1716, 128, 38, 0.3, 2.65, 30);
+  GR.spinArrow = S(arrow, { dash: [12, 10], width: 3.2 });
+  const e = arrow[arrow.length - 1];
+  const tx = -128 * Math.sin(2.65), ty = 38 * Math.cos(2.65), tl = Math.hypot(tx, ty);
+  const ux = tx / tl, uy = ty / tl;
+  GR.spinHead = S([[e[0] - ux * 16 - uy * 10, e[1] - uy * 16 + ux * 10], [e[0], e[1]], [e[0] - ux * 16 + uy * 10, e[1] - uy * 16 - ux * 10]], { width: 3.4 });
+  GR.slots = [[630, 1780, 0.4], [662, 1783, -0.3], [692, 1779, 0.8], [645, 1767, -0.6], [678, 1768, 0.2], [661, 1756, -0.1]];
+}
+function crankAngle(t) {
+  const [a, b] = SCENE.crank;
+  return 0.5 + 2.3 * TAU * E.inOutSine(seg(t, a, b));
+}
+function grinderShake(t) {
+  const [a, b] = SCENE.crank;
+  if (t < a || t > b + 0.15) return { x: 0, y: 0, r: 0 };
+  const env = Math.min(seg(t, a, a + 0.25), 1 - seg(t, b - 0.1, b + 0.15));
+  return { x: env * 1.8 * Math.sin(t * TAU * 19), y: env * 1.3 * Math.sin(t * TAU * 23 + 1.3), r: env * 0.007 * Math.sin(t * TAU * 13 + 0.4) };
+}
+
+/* ───────── 가루 ───────── */
+const GROUNDS = [];
+function buildGrounds() {
+  const [a] = SCENE.grounds, N = 230;
+  for (let i = 0; i < N; i++) {
+    const h = k => hash(i, k, 313);
+    const shape = [0, 1, 2, 3].map(k => [k * (TAU / 4) + (hash(i, k, 5) - 0.5) * 0.7, 0.72 + 0.5 * hash(i, k, 6)]);
+    GROUNDS.push({ e: a + 1.2 * (i / N) + (h(1) - 0.5) * 0.03, T: 0.8 + 0.06 * h(2), off: (h(3) - 0.5) * 24, wob: h(4) * TAU, r: 3.2 + 3.2 * h(5), rot: h(6) * TAU, spin: (h(7) - 0.5) * 10, dark: h(8) < 0.22, shape });
+  }
+}
+function groundsArrived(t) {
+  let n = 0;
+  for (const q of GROUNDS) if (t >= q.e + q.T) n++;
+  return n / GROUNDS.length;
+}
+
+/* ───────── 포터필터 · 탬퍼 ───────── */
+const PF = {};
+function buildPortafilter() {
+  PF.rimBack = S(ellipsePts(0, 0, 60, 10, Math.PI, TAU, 24));
+  const rimF = ellipsePts(0, 0, 60, 10, 0, Math.PI, 24);
+  PF.rimFront = S(rimF);
+  PF.walls = [S([[-60, 0], [-52, 38]]), S([[60, 0], [52, 38]])];
+  const bottom = ellipsePts(0, 38, 52, 8, Math.PI, 0, 20);
+  PF.bottom = S(bottom);
+  PF.band = S(ellipsePts(0, 13, 57, 9, 0.1 * Math.PI, 0.9 * Math.PI, 18), { width: 3.2 });
+  PF.occ = S([...rimF, [-52, 38], ...bottom, [60, 0]], { closed: true });
+  PF.spouts = [S([[-21, 45], [-18, 61], [-9, 61], [-7, 45]]), S([[7, 45], [9, 61], [18, 61], [21, 45]])];
+  PF.handle = S([[57, 7], [150, 11], [188, 12], [199, 21], [188, 31], [150, 31], [55, 27]], { closed: true });
+  PF.grip = S([[150, 12], [150, 30]], { width: 3.2 });
+  PF.innerOpen = ellipsePts(0, 0, 57, 8.5, 0, Math.PI, 16);
+  // 탬퍼 (원점: 누르는 바닥 가운데)
+  const topE = ellipsePts(0, -16, 54, 8, 0, TAU, 32);
+  PF.tBase = S([[-54, -16], [-54, 0], ...ellipsePts(0, 0, 54, 8, Math.PI, 0, 20), [54, -16]]);
+  PF.tTop = S(topE, { closed: true });
+  PF.tOcc = S([[-54, -16], [-54, 0], ...ellipsePts(0, 0, 54, 8, Math.PI, 0, 20), [54, -16], ...ellipsePts(0, -16, 54, 8, 0, -Math.PI, 16)], { closed: true });
+  PF.tNeck = [S([[-10, -22], [-8, -40]]), S([[10, -22], [8, -40]])];
+  PF.tKnob = S(ellipsePts(0, -62, 24, 25, 0, TAU, 28), { closed: true });
+}
+function portafilterY(t) {
+  const [a, b] = SCENE.lockIn;
+  if (t < a) return PLACE.portafilter.y;
+  return track(t, [[a, PLACE.portafilter.y], [b - 0.07, 2801], [b, 2805]]);
+}
+function portafilterRot(t) {
+  const [, b] = SCENE.lockIn;
+  return track(t, [[b - 0.1, 0], [b - 0.06, -0.11], [b, 0], [b + 0.04, 0.015], [b + 0.08, 0]]);
+}
+function tamperState(t) {
+  const [a, b] = SCENE.tamp;
+  if (t < a || t > b) return null;
+  const inEnd = a + 0.35, pressEnd = inEnd + 0.12, holdEnd = pressEnd + 0.1;
+  let x, y, rot, sx = 1, sy = 1;
+  if (t < inEnd) {
+    const s = E.inOutCubic(seg(t, a, inEnd));
+    x = lerp(1010, 450, s); y = lerp(2540, 2846, s); rot = lerp(0.35, 0, s);
+  } else if (t < pressEnd) {
+    const s = E.inQuad(seg(t, inEnd, pressEnd));
+    x = 450; y = lerp(2846, 2902, s); rot = 0;
+  } else if (t < holdEnd) {
+    x = 450; y = 2902; rot = 0;
+    sy = track(t, [[pressEnd, 1], [pressEnd + 0.03, 0.84], [pressEnd + 0.07, 0.92], [holdEnd, 1]]);
+    sx = 1 / Math.pow(sy, 0.6);
+  } else {
+    const s = E.inCubic(seg(t, holdEnd, b));
+    x = lerp(450, 1010, s); y = lerp(2902, 2520, s); rot = lerp(0, -0.3, s);
+  }
+  return { x, y, rot, sx, sy };
+}
+
+/* ───────── 머신 헤드 ───────── */
+const MC = {};
+function buildMachine() {
+  MC.body = S(roundRectPts(282, 2572, 618, 2764, 26, 6), { closed: true });
+  MC.tray = S(roundRectPts(298, 2552, 602, 2572, 6, 3), { closed: true });
+  MC.rail = S([[312, 2552], [312, 2532], [588, 2532], [588, 2552]], { width: 3.4 });
+  MC.seam = S([[292, 2606], [608, 2606]], { width: 3.2 });
+  MC.gauge = S(ellipsePts(536, 2672, 36, 36, -Math.PI / 2, TAU - Math.PI / 2, 40), { closed: true });
+  MC.gaugeIn = S(ellipsePts(536, 2672, 27, 27, 0, TAU, 32), { closed: true, width: 3 });
+  MC.ticks = [];
+  for (let k = 0; k < 7; k++) {
+    const a = lerp(0.75 * Math.PI, 2.25 * Math.PI, k / 6);
+    MC.ticks.push(S([[536 + 20 * Math.cos(a), 2672 + 20 * Math.sin(a)], [536 + 26 * Math.cos(a), 2672 + 26 * Math.sin(a)]], { width: 2.6, jitter: 0.5 }));
+  }
+  MC.needle = S([[0, 0], [22, 0]], { width: 3.2, jitter: 0.4 });
+  MC.buttons = [S(ellipsePts(344, 2672, 13, 13, 0, TAU, 20), { closed: true }), S(ellipsePts(392, 2672, 13, 13, 0, TAU, 20), { closed: true })];
+  MC.group = S([[398, 2764], [406, 2798], [494, 2798], [502, 2764]], { closed: true });
+  MC.groupRing = S([[402, 2781], [498, 2781]], { width: 3.2 });
+  MC.lugs = [S([[392, 2791], [406, 2791]]), S([[494, 2791], [508, 2791]])];
+}
+function needleAngle(t) {
+  const [a, b] = SCENE.extract;
+  const rest = 0.82 * Math.PI, work = 1.86 * Math.PI;
+  const s = E.inOutCubic(seg(t, a - 0.05, a + 0.25)) * (1 - E.inOutCubic(seg(t, b - 0.05, b + 0.25)));
+  return lerp(rest, work, s) + s * 0.05 * Math.sin(t * 31);
+}
+
+/* ───────── 샷잔 (원점: 바닥 가운데) ───────── */
+const SG = { h: 86 };
+function buildShotGlass() {
+  SG.walls = [S([[-37, -86], [-30, 0]]), S([[37, -86], [30, 0]])];
+  SG.rim = S(ellipsePts(0, -86, 37, 6, 0, TAU, 28), { closed: true });
+  SG.bottom = S(ellipsePts(0, 0, 30, 5, 0, Math.PI, 16));
+  SG.inner = S(ellipsePts(0, -9, 28, 4, 0, Math.PI, 14), { width: 3 });
+  SG.hl = S([[-25, -72], [-22, -30]], { width: 2.8 });
+  SG.tray = S([[368, 3004], [532, 3004]]);
+  SG.grate = [0, 1, 2, 3, 4].map(k => S([[384 + k * 33, 3004], [388 + k * 33, 3016]], { width: 3 }));
+}
+const sgHalfW = y => 30 + 7 * (-y / 86) - 1.8;   // y 높이에서 안쪽 반폭
+function espressoLevel(t) {
+  const [a, b] = SCENE.extract;
+  return 58 * E.inOutSine(seg(t, a + 0.12, b - 0.12));
+}
+
+/* ───────── 큰 유리잔 ───────── */
+const GL = {};
+function buildGlass() {
+  const cx = PLACE.glass.x;
+  GL.top = 3632; GL.bottom = 4016; GL.floor = 3993; GL.fill = 3720;
+  GL.rimBack = S(ellipsePts(cx, GL.top, 138, 17, Math.PI, TAU, 40));
+  GL.rimFront = S(ellipsePts(cx, GL.top, 138, 17, 0, Math.PI, 40));
+  GL.walls = [S([[cx - 138, GL.top], [cx - 123, GL.bottom]]), S([[cx + 138, GL.top], [cx + 123, GL.bottom]])];
+  GL.base = S(ellipsePts(cx, GL.bottom, 123, 14, 0, Math.PI, 30));
+  GL.inner = S(ellipsePts(cx, GL.floor, 117, 11, 0.05 * Math.PI, 0.95 * Math.PI, 26), { width: 3 });
+  GL.hl = [S([[528, 3672], [538, 3930]], { width: 3 }), S([[545, 3700], [550, 3800]], { width: 2.6 })];
+  const L = y => lerp(cx - 133, cx - 119, (y - GL.top) / (GL.floor - GL.top));
+  const R = y => lerp(cx + 133, cx + 119, (y - GL.top) / (GL.floor - GL.top));
+  GL.left = L; GL.right = R;
+  GL.interior = [[L(GL.top + 6), GL.top + 6], [R(GL.top + 6), GL.top + 6], [R(GL.floor), GL.floor], ...ellipsePts(cx, GL.floor, 119, 11, 0, Math.PI, 20), [L(GL.floor), GL.floor]];
+}
+function clipInterior(g) {
+  g.beginPath();
+  GL.interior.forEach((p, i) => (i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])));
+  g.closePath();
+  g.clip();
+}
+function waterSurface(t) {
+  const [a] = SCENE.water;
+  if (t < a + 0.12) return null;
+  return lerp(GL.floor, GL.fill, E.outQuad(seg(t, a + 0.12, a + 0.9)));
+}
+function coffeeTop(t) {
+  const [a, b] = SCENE.pour;
+  if (t < a + 0.53) return null;
+  return lerp(GL.floor + 4, GL.fill - 8, E.inOutSine(seg(t, a + 0.53, b - 0.05)));
+}
+
+/* ───────── 얼음 · 빨대 · 물방울 · 반짝이 ───────── */
+const ICE = [
+  { x: 584, y: 3949, rot: -0.14, fromX: 596, fromRot: 0.55 },
+  { x: 694, y: 3947, rot: 0.12, fromX: 680, fromRot: -0.6 },
+  { x: 638, y: 3866, rot: -0.05, fromX: 650, fromRot: 0.7 },
+];
+const ICE_FALL = 0.26;
+let ICE_STROKES = [];
+function buildIce() {
+  ICE_STROKES = ICE.map((c, k) => {
+    const pts = roundRectPts(-45, -42, 45, 42, 17, 5).map(([x, y], i) => [x * (1 + 0.04 * Math.sin(i + k)), y * (1 + 0.04 * Math.cos(i * 1.3 + k))]);
+    return {
+      body: S(pts, { closed: true, color: COLOR.iceEdge, seed: 800 + k * 13 }),
+      glint: S([[-26, -6], [-26, -24], [-10, -26]], { color: COLOR.iceEdge, width: 3.4, seed: 830 + k }),
+      dot: S(ellipsePts(-14, -10, 3, 3, 0, TAU, 8), { closed: true, color: COLOR.iceEdge, width: 2.4, seed: 840 + k }),
+    };
+  });
+}
+function iceState(k, t) {
+  const c = ICE[k], t0 = SCENE.ice[k];
+  if (t < t0) return null;
+  const s = seg(t, t0, t0 + ICE_FALL);
+  let x = lerp(c.fromX, c.x, s), y = lerp(3430, c.y, E.inQuad(s)), rot = lerp(c.fromRot, c.rot, E.outQuad(s)), sy = 1;
+  if (s >= 1) {
+    const u = t - t0 - ICE_FALL;
+    sy = track(u, [[0, 0.78], [0.07, 1.07], [0.14, 0.97], [0.2, 1]]);
+    y += track(u, [[0, 0], [0.07, -13], [0.13, -3], [0.17, 0]]) + 42 * (1 - sy);
+  }
+  return { x, y, rot, sx: 1 / Math.pow(sy, 0.8), sy };
+}
+function iceAll(t) {                     // 물이 차오르면 얼음이 떠오른다
+  const st = [0, 1, 2].map(k => iceState(k, t));
+  const surf = waterSurface(t);
+  if (surf !== null && st[0] && st[1] && st[2]) {
+    st[0].y = Math.min(st[0].y, surf + 34);
+    st[1].y = Math.min(st[1].y, surf + 36);
+    st[2].y = Math.min(st[2].y, Math.min(st[0].y, st[1].y) - 82);
+    const bob = seg(t, SCENE.water[1] - 0.3, SCENE.water[1] + 0.2);
+    st.forEach((q, k) => { q.y += bob * 2.4 * Math.sin(t * 5.2 + k * 2.1); q.rot += bob * 0.02 * Math.sin(t * 4.1 + k); });
+  }
+  return st;
+}
+const STRAW = { len: 420, w: 10, x: 706, y: 3988, rot: 0.21 };
+function buildStraw() {
+  const { len, w } = STRAW;
+  const topY = -len - 34, bend = 0.62;
+  const dx = Math.sin(bend), dy = -Math.cos(bend), nx = Math.cos(bend), ny = Math.sin(bend);
+  const B = [0, topY], seg2 = 84;
+  const tl = [B[0] - nx * w, B[1] - ny * w], tr = [B[0] + nx * w, B[1] + ny * w];
+  const el = [tl[0] + dx * seg2, tl[1] + dy * seg2], er = [tr[0] + dx * seg2, tr[1] + dy * seg2];
+  const outline = [[-w, 0], [-w, topY], tl, el, er, tr, [w, topY], [w, 0]];
+  STRAW.outline = S(outline, { closed: true, seed: 901 });
+  STRAW.ridges = [0, 1, 2, 3].map(k => S([[-w, -len - 5 - k * 8], [0, -len - 8 - k * 8], [w, -len - 5 - k * 8]], { width: 2.8, seed: 910 + k }));
+  STRAW.stripes = [];
+  for (let y = -18; y > -len + 8; y -= 30) STRAW.stripes.push(S([[-w + 1, y], [w - 1, y - 13]], { color: COLOR.iceEdge, width: 4, seed: 930 + y, jitter: 0.8 }));
+  for (let k = 0; k < 3; k++) {
+    const u = 16 + k * 26;
+    STRAW.stripes.push(S([[tl[0] + dx * u + nx, tl[1] + dy * u + ny], [tr[0] + dx * (u + 12) - nx, tr[1] + dy * (u + 12) - ny]], { color: COLOR.iceEdge, width: 4, seed: 990 + k, jitter: 0.8 }));
+  }
+}
+function strawPose(t) {
+  const [a, b] = SCENE.straw;
+  if (t < a) return null;
+  const s = seg(t, a, b - 0.08);
+  const off = lerp(-560, 0, E.inQuad(s));
+  let rot = lerp(0.36, STRAW.rot, E.outQuad(s));
+  const u = t - (b - 0.08);
+  if (u > 0) rot = STRAW.rot + 0.07 * Math.exp(-u / 0.17) * Math.sin((u * TAU) / 0.2);
+  return { x: STRAW.x, y: STRAW.y + off, rot };
+}
+const DROPS = [
+  [558, 3702, 13], [612, 3688, 10], [700, 3712, 12], [748, 3762, 11], [566, 3792, 14], [655, 3806, 10],
+  [728, 3858, 13], [588, 3884, 11], [690, 3906, 14], [548, 3944, 10], [626, 3962, 12], [742, 3950, 10],
+];
+const SPARKS = [
+  { x: 468, y: 3586, type: 'fan', ang: -2.35 }, { x: 850, y: 3688, type: 'star', r: 24 },
+  { x: 450, y: 3796, type: 'star', r: 19 }, { x: 834, y: 3908, type: 'fan', ang: 0.25 },
+  { x: 566, y: 3500, type: 'star', r: 15 },
+];
+
+/* ───────── 라벨 · 체크 ───────── */
+const LABEL_CIRCLES = [];
+function buildLabels() {
+  TEXT.steps.forEach((st, i) => {
+    const r = st.size * 0.48, pts = [];
+    for (let k = 0; k <= 50; k++) {
+      const u = k / 50, a = -2.2 + (TAU + 0.42) * u;
+      const rr = r * (1 + 0.045 * Math.sin(a * 2 + i) + 0.035 * u);
+      pts.push([rr * Math.cos(a), rr * Math.sin(a) * 0.96]);
+    }
+    LABEL_CIRCLES[i] = S(pts, { seed: 1200 + i * 7 });
+  });
+}
+function labelLayout(g, st) {
+  const key = `${FONT_EPOCH}|${st.text}|${st.size}|${st.x}`;
+  if (st._lay && st._lay.key === key) return st._lay;
+  const tw = textWidth(g, st.text, st.size);
+  const D = st.size * 0.96, gap = st.size * 0.2, total = D + gap + tw, left = st.x - total / 2;
+  st._lay = { key, tw, D, left, cx: left + D / 2, cy: st.y - st.size * 0.03, textLeft: left + D + gap, right: left + total };
+  return st._lay;
+}
+const CHECK = S([[-26, 2], [-9, 22], [30, -30]].map(([x, y]) => [x * 1.4, y * 1.4]), { color: COLOR.check, width: 8, seed: 1300 });
+
+/* ───────── 종이 뒤 낙서 층 ───────── */
+const DOODLES = [];
+function doodleParts(type) {
+  const U = [];
+  const add = (pts, closed = false) => U.push({ pts, closed });
+  switch (type) {
+    case 'bean':
+      add(ellipsePts(0, 0, 1, 0.66, 0, TAU, 30), true);
+      add(Array.from({ length: 11 }, (_, i) => { const u = (i / 10) * 2 - 1; return [u * 0.72, 0.14 * Math.sin(u * Math.PI)]; }));
+      break;
+    case 'cup':
+      add(catmull([[-0.75, -0.45], [-0.68, 0.35], [-0.45, 0.62], [0.45, 0.62], [0.68, 0.35], [0.75, -0.45]], 6));
+      add(ellipsePts(0, -0.45, 0.75, 0.14, 0, TAU, 24), true);
+      add(ellipsePts(0.8, 0.02, 0.22, 0.24, -1.4, 1.4, 12));
+      add(catmull([[-0.1, -0.64], [0.03, -0.82], [-0.1, -1.0], [0.03, -1.16]], 5));
+      break;
+    case 'star': {
+      const p = [];
+      for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, r = i % 2 ? 0.42 : 1; p.push([r * Math.cos(a), r * Math.sin(a)]); }
+      add(p, true);
+      break;
+    }
+    case 'spiral': {
+      const p = [];
+      for (let i = 0; i <= 60; i++) { const u = i / 60, a = u * TAU * 2.4; p.push([Math.cos(a) * u, Math.sin(a) * u]); }
+      add(p);
+      break;
+    }
+    case 'heart': {
+      const p = [];
+      for (let i = 0; i < 40; i++) {
+        const a = (i / 40) * TAU;
+        p.push([0.9 * Math.pow(Math.sin(a), 3), -(0.8 * Math.cos(a) - 0.3 * Math.cos(2 * a) - 0.12 * Math.cos(3 * a) - 0.05 * Math.cos(4 * a))]);
+      }
+      add(p, true);
+      break;
+    }
+    case 'wave': {
+      const p = [];
+      for (let i = 0; i <= 40; i++) { const u = i / 40; p.push([u * 2 - 1, 0.22 * Math.sin(u * TAU * 2)]); }
+      add(p);
+      break;
+    }
+    case 'arrow':
+      add(catmull([[-1, 0.4], [-0.4, -0.2], [0.3, 0.1], [0.85, -0.35]], 8));
+      add([[0.55, -0.44], [0.85, -0.35], [0.72, -0.07]]);
+      break;
+    case 'sparkle':
+      add([[0, -1], [0.18, -0.18], [1, 0], [0.18, 0.18], [0, 1], [-0.18, 0.18], [-1, 0], [-0.18, -0.18]], true);
+      break;
+    case 'leaf':
+      add(catmull([[-0.9, 0.3], [-0.3, -0.45], [0.5, -0.5], [0.95, -0.1]], 8));
+      add(catmull([[-0.9, 0.3], [-0.1, 0.35], [0.6, 0.15], [0.95, -0.1]], 8));
+      add([[-0.8, 0.28], [0.8, -0.12]]);
+      break;
+    case 'cloud': {
+      const p = [];
+      for (let i = 0; i < 60; i++) { const a = (i / 60) * TAU, r = 0.62 + 0.14 * Math.abs(Math.sin(a * 3)); p.push([1.2 * r * Math.cos(a), 0.75 * r * Math.sin(a)]); }
+      add(p, true);
+      break;
+    }
+    case 'drop': {
+      const p = [];
+      for (let i = 0; i < 30; i++) { const a = (i / 30) * TAU; p.push([0.62 * Math.sin(a) * Math.sin(a / 2), -Math.cos(a)]); }
+      add(p, true);
+      break;
+    }
+    case 'scribble': {
+      const p = [];
+      for (let i = 0; i <= 70; i++) { const u = i / 70, a = u * TAU * 4; p.push([u * 2 - 1 + 0.25 * Math.cos(a), 0.3 * Math.sin(a)]); }
+      add(p);
+      break;
+    }
+    case 'sun':
+      add(ellipsePts(0, 0, 0.45, 0.45, 0, TAU, 24), true);
+      for (let k = 0; k < 8; k++) { const a = (k / 8) * TAU; add([[0.62 * Math.cos(a), 0.62 * Math.sin(a)], [0.95 * Math.cos(a), 0.95 * Math.sin(a)]]); }
+      break;
+    case 'cube':
+      add(roundRectPts(-0.8, -0.75, 0.8, 0.75, 0.25), true);
+      add([[-0.45, -0.2], [-0.45, -0.45], [-0.2, -0.45]]);
+      break;
+    case 'dots':
+      for (let k = 0; k < 3; k++) add(ellipsePts(-0.6 + k * 0.6, 0.1 * (k % 2), 0.12, 0.12, 0, TAU, 10), true);
+      break;
+    default:
+      add([[-1, 0.2], [-0.6, -0.25], [-0.2, 0.2], [0.2, -0.25], [0.6, 0.2], [1, -0.25]]);
+  }
+  return U;
+}
+function buildDoodles() {
+  const types = ['bean', 'cup', 'star', 'spiral', 'heart', 'wave', 'arrow', 'sparkle', 'leaf', 'cloud', 'drop', 'scribble', 'sun', 'cube', 'dots', 'zigzag'];
+  const R = rng(7);
+  for (let gy = -600; gy < 5300; gy += 300) {
+    for (let gx = -900; gx < 2100; gx += 300) {
+      if (R() > 0.52) continue;
+      const type = types[Math.floor(R() * types.length)];
+      const x = gx + 150 + (R() - 0.5) * 200, y = gy + 150 + (R() - 0.5) * 200;
+      const size = 30 + R() * 38, rot = (R() - 0.5) * 1.6, c = Math.cos(rot), s = Math.sin(rot);
+      const strokes = doodleParts(type).map((p, i) => S(p.pts.map(([u, v]) => [x + (u * c - v * s) * size, y + (u * s + v * c) * size]), {
+        closed: p.closed, width: 3.4, jitter: 1.5, spacing: 8, seed: 5000 + DOODLES.length * 17 + i,
+      }));
+      DOODLES.push({ x, y, r: size * 1.3, strokes });
+    }
+  }
+}
+function drawDoodles(g, lc, alpha) {
+  const hw = STAGE.w / 2 / lc.z, hh = STAGE.h / 2 / lc.z;
+  const x0 = lc.x - hw, x1 = lc.x + hw, y0 = lc.y - hh, y1 = lc.y + hh;
+  for (const d of DOODLES) {
+    if (d.x + d.r < x0 || d.x - d.r > x1 || d.y + d.r < y0 || d.y - d.r > y1) continue;
+    for (const s of d.strokes) draw(g, s, 1, { alpha });
+  }
+}
+
+/* =======================================================================
+   장면 그리기
+   ======================================================================= */
+const pr = (t, a, b) => E.smooth(seg(t, a, b));
+
+/* 제목 · 밑줄 · 부제 */
+const underlineY = x => PLACE.underlineY + 2.4 * Math.sin((x - PLACE.beanLand.x) / 58);
+const UNDER = { x0: 160, x1: 900 };      // 제목 글자 끝에 맞춘 밑줄
+function heroRollX(t) {                // 밑줄 위에 있는 동안 원두의 x (없으면 null)
+  const [a] = SCENE.beanSettle, [r0, r1] = SCENE.beanRoll;
+  if (t < a || t >= r1) return null;
+  if (t < r0) return PLACE.beanLand.x;
+  return lerp(PLACE.beanLand.x, UNDER.x1, E.inQuad(seg(t, r0 + 0.08, r1)));
+}
+function underlineDip(x, t) {
+  let d = 0;
+  const t0 = SCENE.beanDrop[1];
+  if (t >= t0 && t < t0 + 0.6) {
+    const u = t - t0;
+    d += 9 * Math.exp(-u / 0.08) * Math.cos((u * TAU) / 0.16) * Math.exp(-Math.pow((x - PLACE.beanLand.x) / 60, 2));
+  }
+  const hx = heroRollX(t);
+  if (hx !== null) d += 2.2 * Math.exp(-Math.pow((x - hx) / 45, 2));
+  return d;
+}
+function drawTitle(g, t) {
+  write(g, TEXT.title.text, TEXT.title.x, TEXT.title.y, TEXT.title.size, TEXT.title.t, t, { seed: 1 });
+  const p = pr(t, SCENE.underline[0], SCENE.underline[1]);
+  if (p > 0) {
+    const pts = [];
+    for (let x = UNDER.x0; x <= UNDER.x1; x += 8) pts.push([x, underlineY(x) + underlineDip(x, t)]);
+    live(g, pts, { p, seed: 41 });
+  }
+  write(g, TEXT.subtitle.text, TEXT.subtitle.x, TEXT.subtitle.y, TEXT.subtitle.size, TEXT.subtitle.t, t, { seed: 2 });
+}
+
+/* ①~⑤ 라벨: 연필 동그라미 번호 → 글자 → 형광 밑줄 */
+function drawLabels(g, t) {
+  TEXT.steps.forEach((st, i) => {
+    if (t < st.t) return;
+    const L = labelLayout(g, st);
+    const tText = st.t + 0.2;
+    const done = tText + Array.from(st.text).length / TEXT.charsPerSec;
+    const hp = seg(t, done, done + 0.3);
+    if (hp > 0) {
+      const y = st.y + st.size * 0.2, x0 = L.textLeft - 8, x1 = L.right + 8, pts = [];
+      for (let k = 0; k <= 12; k++) pts.push([lerp(x0, x1, k / 12), y + 2.2 * Math.sin(k * 0.7 + i)]);
+      g.save();
+      g.globalCompositeOperation = 'multiply';
+      live(g, pts, { p: E.outQuad(hp), color: COLOR.highlighter, width: st.size * 0.36, overlay: false, jitter: 1.2, seed: 900 + i });
+      g.restore();
+    }
+    g.save();
+    g.translate(L.cx, L.cy);
+    draw(g, LABEL_CIRCLES[i], pr(t, st.t, st.t + 0.2));
+    g.restore();
+    write(g, st.num, L.cx, L.cy + st.size * 0.02, Math.round(st.size * 0.62), st.t + 0.1, t, { seed: 3 + i });
+    write(g, st.text, L.textLeft, st.y, st.size, tText, t, { align: 'left', seed: 4 + i });
+  });
+}
+
+/* 주인공 원두 */
+function heroState(t) {
+  const H = BEANS.hero;
+  const [d0, d1] = SCENE.beanDrop, [, s1] = SCENE.beanSettle, [r0, r1] = SCENE.beanRoll, [p0, p1] = SCENE.beanPath;
+  const land = PLACE.beanLand;
+  if (t < d0) return null;
+  if (t < d1) {
+    const s = seg(t, d0, d1);
+    return { x: lerp(land.x + 18, land.x, s), y: lerp(-380, land.y, s * s), rot: (1 - s) * 5.4, sx: 1, sy: 1, phase: 'fall' };
+  }
+  if (t < s1) {
+    const u = t - d1;
+    const sy = track(u, [[0, 0.6], [0.06, 1.14], [0.14, 1], [0.21, 1.03], [0.24, 0.86], [0.29, 1.03], [0.34, 1]]);
+    const hop = track(u, [[0, 0], [0.06, -10], [0.13, -22], [0.2, -6], [0.24, 0], [0.34, 0]]);
+    const bottom = underlineY(land.x) + underlineDip(land.x, t);
+    return { x: land.x, y: bottom + hop - H.ry * sy, rot: 0, sx: 1 / Math.pow(sy, 0.8), sy, phase: 'land' };
+  }
+  const rollEnd = UNDER.x1;
+  if (t < r1) {
+    const rock = -0.25 * Math.sin(Math.PI * seg(t, r0, r0 + 0.1));
+    const x = heroRollX(t), rot = rock + (x - land.x) / 25;
+    return { x, y: underlineY(x) + 2.2 - supportH(H, rot), rot, sx: 1, sy: 1, phase: 'roll' };
+  }
+  const rotRoll = (rollEnd - land.x) / 25;
+  if (t < p1) {
+    const s = seg(t, p0, p1), f = 0.5 * s + 0.5 * E.inOutSine(s);
+    const p = ROUTE.bean.at(f);
+    return { x: p.x, y: p.y, rot: rotRoll + (f * ROUTE.bean.total) / 25, sx: 1, sy: 1, phase: 'path', f };
+  }
+  const rotEnd = rotRoll + ROUTE.bean.total / 25;
+  const rest = Math.round(rotEnd / Math.PI) * Math.PI + 0.12;
+  const u = t - p1;
+  const sy = track(u, [[0, 0.72], [0.07, 1.08], [0.14, 0.97], [0.2, 1]]);
+  return { x: BOWL.heroRest.x, y: BOWL.heroRest.y + H.ry * (1 - sy), rot: lerp(rotEnd, rest, E.outCubic(seg(u, 0, 0.18))), sx: 1 / Math.pow(sy, 0.8), sy, phase: 'bowl' };
+}
+function drawHeroTop(g, t) {             // 그릇에 닿기 전까지는 맨 위 층에
+  const h = heroState(t);
+  if (!h || h.phase === 'bowl') return;
+  if (h.phase === 'fall') {
+    const s = seg(t, SCENE.beanDrop[0] + 0.08, SCENE.beanDrop[1]);
+    for (let k = 0; k < 3; k++) {
+      const x = h.x - 16 + k * 16, y0 = h.y - 40 - k * 10;
+      live(g, [[x, y0 - 34], [x, y0]], { alpha: 0.55 * s, width: 3, seed: 60 + k, jitter: 0.8 });
+    }
+  }
+  if (h.phase === 'land') drawImpact(g, PLACE.beanLand.x, PLACE.underlineY - 2, t, SCENE.beanDrop[1], { spread: 76, len: 16 });
+  drawBean(g, BEANS.hero, h.x, h.y, h.rot, h.sx, h.sy);
+}
+function drawImpact(g, x, y, t, t0, o = {}) {
+  const dur = o.dur ?? 0.28, s = (t - t0) / dur;
+  if (s < 0 || s > 1) return;
+  const spread = o.spread ?? 40, len = o.len ?? 16;
+  for (const side of [-1, 1]) {
+    for (let k = 0; k < 3; k++) {
+      const a = -Math.PI / 2 + side * (0.75 + k * 0.38);
+      const r0 = spread * 0.5 + s * 12, r1 = r0 + len * (1 - s * 0.5);
+      const c = Math.cos(a), sn = Math.sin(a);
+      live(g, [[x + c * r0, y + sn * r0 * 0.7], [x + c * r1, y + sn * r1 * 0.7]], { alpha: 1 - s, width: 3.2, seed: 700 + k + (side > 0 ? 10 : 0), jitter: 0.7, color: o.color });
+    }
+  }
+}
+
+/* 그릇 · 원두 더미 · 김 */
+function drawBowl(g, t) {
+  const [b0] = SCENE.bowlDraw;
+  if (t < b0) return;
+  const tilt = bowlTilt(t), [px, py] = BOWL.pivot;
+  g.save();
+  g.translate(px, py); g.rotate(tilt); g.translate(-px, -py);
+  draw(g, BOWL.rimBack, pr(t, b0, b0 + 0.15));
+  const [pp0] = SCENE.pilePop;
+  BOWL.pile.forEach((b, k) => {
+    const T = pp0 + k * 0.042;
+    if (t < T || t >= FLY[k].L) return;
+    const s = seg(t, T, T + 0.16), sc = E.outBack(s);
+    drawBean(g, BEANS.small[k % 5], b[0], b[1] - 16 * Math.sin(Math.PI * s), b[2], sc, sc);
+  });
+  const h = heroState(t);
+  if (h && h.phase === 'bowl' && t < FLY.hero.L) drawBean(g, BEANS.hero, h.x, h.y, h.rot, h.sx, h.sy);
+  fill(g, BOWL.occ, paperStyle(g));
+  draw(g, BOWL.rimFront, pr(t, b0 + 0.05, b0 + 0.21));
+  draw(g, BOWL.body, pr(t, b0 + 0.13, b0 + 0.35));
+  draw(g, BOWL.foot, pr(t, b0 + 0.29, b0 + 0.43));
+  draw(g, BOWL.band, pr(t, b0 + 0.37, b0 + 0.5));
+  g.restore();
+  drawSteam(g, t);
+}
+function drawSteam(g, t) {
+  const t0 = SCENE.steam;
+  if (t < t0) return;
+  const fade = 1 - seg(t, SCENE.bowlPour[0] - 0.03, SCENE.bowlPour[0] + 0.15);
+  if (fade <= 0) return;
+  for (let k = 0; k < 3; k++) {
+    const local = t - t0 - k * 0.38;
+    if (local < 0) continue;
+    const period = 1.25, c = (local % period) / period, cyc = Math.floor(local / period);
+    const head = clamp(c * 1.7), tail = clamp(c * 1.7 - 0.7);
+    const x0 = 412 + k * 42, y0 = 868 - (k === 1 ? 16 : 0) - 30 * c, pts = [];
+    for (let i = 0; i <= 28; i++) {
+      const v = i / 28;
+      pts.push([x0 + 15 * Math.sin(v * TAU * 1.15 + k * 1.7 + cyc) * (0.45 + v * 0.75), y0 - v * 150]);
+    }
+    live(g, pts, { from: tail, p: head, alpha: 0.85 * fade * (1 - c * 0.4), width: 4, seed: 300 + k * 7 + cyc });
+  }
+}
+
+/* 그라인더 · 날아가는 원두 */
+function arrivedBeans(t) {
+  let n = 0;
+  BOWL.pile.forEach((_, k) => { if (t >= FLY[k].L + FLY[k].D) n++; });
+  if (t >= FLY.hero.L + FLY.hero.D) n++;
+  return n;
+}
+function drawFlyingBeans(g, t) {
+  BOWL.pile.forEach((b, k) => {
+    const f = FLY[k];
+    if (t < f.L) return;
+    const st = bowlXform(f.L, b[0], b[1]);
+    const q = flight(f, t, st.x, st.y, b[2] + st.r);
+    if (q) drawBean(g, BEANS.small[k % 5], q.x, q.y, q.rot);
+  });
+  if (t >= FLY.hero.L) {
+    const h = heroState(FLY.hero.L - 1e-4), st = bowlXform(FLY.hero.L, h.x, h.y);
+    const q = flight(FLY.hero, t, st.x, st.y, h.rot + st.r);
+    if (q) drawBean(g, BEANS.hero, q.x, q.y, q.rot);
+  }
+}
+function drawGrinder(g, t) {
+  const [a] = SCENE.grinderDraw;
+  const on = t >= a, sh = grinderShake(t), G = PLACE.grinder;
+  const shake = () => { g.translate(G.x + sh.x, G.y + sh.y); g.rotate(sh.r); g.translate(-G.x, -G.y); };
+  g.save();
+  shake();
+  if (on) draw(g, GR.hopperBack, pr(t, a, a + 0.13));
+  // 호퍼 안에 쌓인 원두 (갈리면서 아래로 사라짐)
+  const n = arrivedBeans(t), [c0, c1] = SCENE.crank;
+  GR.slots.forEach(([x, y, r], i) => {
+    if (n < 1 + i * 2.4) return;
+    const sink = 42 * E.inQuad(seg(t, c0 + 0.15 + (5 - i) * 0.2, c1 - 0.4 - i * 0.05));
+    drawBean(g, BEANS.small[(i + 2) % 5], x, y + sink, r);
+  });
+  g.restore();
+  drawFlyingBeans(g, t);
+  if (!on) return;
+  g.save();
+  shake();
+  fill(g, GR.hopperOcc, paperStyle(g));
+  draw(g, GR.hopperRim, pr(t, a + 0.03, a + 0.16));
+  GR.hopperSides.forEach(s => draw(g, s, pr(t, a + 0.1, a + 0.22)));
+  draw(g, GR.hopperBottom, pr(t, a + 0.18, a + 0.26));
+  fill(g, GR.plate, paperStyle(g));
+  draw(g, GR.plate, pr(t, a + 0.19, a + 0.35));
+  fill(g, GR.box, paperStyle(g));
+  draw(g, GR.box, pr(t, a + 0.27, a + 0.55));
+  fill(g, GR.base, paperStyle(g));
+  draw(g, GR.base, pr(t, a + 0.5, a + 0.63));
+  draw(g, GR.drawer, pr(t, a + 0.57, a + 0.71));
+  draw(g, GR.knob, pr(t, a + 0.69, a + 0.75));
+  draw(g, GR.seam, pr(t, a + 0.62, a + 0.72));
+  GR.grain.forEach((s, i) => draw(g, s, pr(t, a + 0.7 + i * 0.05, a + 0.82 + i * 0.05)));
+  draw(g, GR.spout, pr(t, a + 0.85, a + 1.0));
+  // 손잡이: 뒤쪽에 있으면 축보다 먼저, 앞쪽이면 나중에
+  const th = crankAngle(t), [qx, qy] = GR.pivot;
+  const ex = qx + 96 * Math.cos(th), ey = qy + 26 * Math.sin(th);
+  const pArm = pr(t, a + 0.8, a + 0.91), pKnob = pr(t, a + 0.87, a + 1.0);
+  const crank = () => {
+    g.save();
+    g.translate(qx, qy);
+    g.rotate(Math.atan2(ey - qy, ex - qx));
+    g.scale(Math.max(0.2, Math.hypot(ex - qx, ey - qy) / 96), 1);
+    fill(g, GR.arm, paperStyle(g));
+    draw(g, GR.arm, pArm);
+    g.restore();
+    g.save();
+    g.translate(ex, ey);
+    draw(g, GR.stick, pKnob);
+    fill(g, GR.knobTop, paperStyle(g), pKnob > 0.5 ? 1 : 0);
+    draw(g, GR.knobTop, pKnob);
+    g.restore();
+  };
+  const back = Math.sin(th) < 0;
+  if (back) crank();
+  GR.shaft.forEach(s => draw(g, s, pr(t, a + 0.7, a + 0.8)));
+  fill(g, GR.cap, paperStyle(g));
+  draw(g, GR.cap, pr(t, a + 0.77, a + 0.82));
+  if (!back) crank();
+  g.restore();
+  // 도는 방향 화살표
+  const [k0, k1] = SCENE.crank;
+  const ap = pr(t, k0, k0 + 0.25), ae = pr(t, k1, k1 + 0.2);
+  if (ap > 0 && ae < 1) {
+    draw(g, GR.spinArrow, ap, { from: ae, alpha: 0.8 });
+    if (ap >= 1 && ae <= 0) draw(g, GR.spinHead, 1, { alpha: 0.8 });
+  }
+}
+
+/* 가루 흐름 */
+function drawGrounds(g, t) {
+  const [a, b] = SCENE.grounds;
+  if (t < a || t > b + 0.05) return;
+  const base = new Path2D(), dark = new Path2D();
+  for (const q of GROUNDS) {
+    const u = (t - q.e) / q.T;
+    if (u < 0 || u >= 1) continue;
+    const p = ROUTE.grounds.at(Math.pow(u, 1.15));
+    const nx = -Math.sin(p.ang), ny = Math.cos(p.ang);
+    const off = q.off * Math.sqrt(Math.sin(Math.PI * Math.min(1, u * 1.15))) + 3 * Math.sin(u * 9 + q.wob);
+    const x = p.x + nx * off, y = p.y + ny * off, r = q.r * Math.min(1, u * 14), rot = q.rot + q.spin * u;
+    const P = q.dark ? dark : base;
+    q.shape.forEach(([da, rr], k) => {
+      const px = x + Math.cos(rot + da) * r * rr, py = y + Math.sin(rot + da) * r * rr;
+      if (k) P.lineTo(px, py); else P.moveTo(px, py);
+    });
+    P.closePath();
+  }
+  g.fillStyle = COLOR.grounds; g.fill(base);
+  g.fillStyle = COLOR.beanCrease; g.fill(dark);
+}
+
+/* 머신 헤드 */
+function drawMachine(g, t) {
+  const [a] = SCENE.machineDraw;
+  if (t < a) return;
+  fill(g, MC.body, paperStyle(g));
+  draw(g, MC.body, pr(t, a, a + 0.34));
+  fill(g, MC.tray, paperStyle(g));
+  draw(g, MC.tray, pr(t, a + 0.18, a + 0.34));
+  draw(g, MC.rail, pr(t, a + 0.28, a + 0.42));
+  draw(g, MC.seam, pr(t, a + 0.3, a + 0.42));
+  fill(g, MC.group, paperStyle(g));
+  draw(g, MC.group, pr(t, a + 0.3, a + 0.52));
+  draw(g, MC.groupRing, pr(t, a + 0.45, a + 0.55));
+  MC.lugs.forEach(s => draw(g, s, pr(t, a + 0.5, a + 0.58)));
+  draw(g, MC.gauge, pr(t, a + 0.42, a + 0.62));
+  draw(g, MC.gaugeIn, pr(t, a + 0.55, a + 0.68));
+  MC.ticks.forEach((s, k) => draw(g, s, pr(t, a + 0.6 + k * 0.012, a + 0.64 + k * 0.012)));
+  const np = pr(t, a + 0.66, a + 0.74);
+  if (np > 0) {
+    g.save();
+    g.translate(536, 2672);
+    g.rotate(needleAngle(t));
+    draw(g, MC.needle, np);
+    g.restore();
+  }
+  MC.buttons.forEach((s, k) => draw(g, s, pr(t, a + 0.62 + k * 0.06, a + 0.72 + k * 0.06)));
+}
+
+/* 포터필터 · 탬퍼 */
+function drawPortafilter(g, t) {
+  const [g0] = SCENE.grounds;
+  const tDraw = g0 - 0.1;
+  if (t < tDraw) return;
+  const y = portafilterY(t), rot = portafilterRot(t), x = PLACE.portafilter.x;
+  const fullH = 28 * Math.pow(groundsArrived(t), 0.85);
+  const tp = tamperState(t);
+  const [, tampEnd] = SCENE.tamp;
+  let h = fullH, flat = 0;
+  if (tp && tp.y > y - fullH) h = Math.max(3, y - tp.y);
+  if (t >= tampEnd - 0.24) { h = 3; flat = 1; }
+  g.save();
+  g.translate(x, y);
+  g.rotate(rot);
+  const p = k => pr(t, tDraw + k * 0.06, tDraw + 0.18 + k * 0.06);
+  fill(g, PF.handle, paperStyle(g));
+  draw(g, PF.handle, p(3));
+  draw(g, PF.grip, p(4));
+  draw(g, PF.rimBack, p(0));
+  if (h > 0.5) {
+    const pts = [];
+    for (let i = 0; i <= 24; i++) {
+      const v = i / 24, dome = Math.pow(Math.max(0, 1 - Math.pow(2 * v - 1, 2)), 0.7);
+      pts.push([-57 + 114 * v, -lerp(h * dome, 3, flat)]);
+    }
+    live(g, [...pts, ...PF.innerOpen], { closed: true, fill: COLOR.grounds, stroke: false, seed: 1400 });
+    live(g, pts, { seed: 1401, width: 3.6 });
+    for (let k = 0; k < 7; k++) {
+      const vx = -40 + k * 13 + 4 * Math.sin(k * 3.1), vy = -lerp(h * 0.45, 1.5, flat) + 3 * Math.cos(k * 1.7);
+      g.fillStyle = COLOR.beanCrease;
+      g.beginPath(); g.arc(vx, vy + 4, 2.2, 0, TAU); g.fill();
+    }
+  }
+  fill(g, PF.occ, paperStyle(g));
+  draw(g, PF.rimFront, p(0));
+  PF.walls.forEach(s => draw(g, s, p(1)));
+  draw(g, PF.bottom, p(2));
+  draw(g, PF.band, p(2.5));
+  PF.spouts.forEach(s => draw(g, s, p(3.5)));
+  g.restore();
+  // 딸깍
+  const [, lk] = SCENE.lockIn;
+  drawImpact(g, 388, 2798, t, lk - 0.04, { spread: 10, len: 14, dur: 0.22 });
+  drawImpact(g, 512, 2798, t, lk - 0.04, { spread: 10, len: 14, dur: 0.22 });
+  if (tp) {
+    g.save();
+    g.translate(tp.x, tp.y);
+    g.rotate(tp.rot);
+    g.scale(tp.sx, tp.sy);
+    fill(g, PF.tOcc, paperStyle(g));
+    draw(g, PF.tBase);
+    draw(g, PF.tTop);
+    PF.tNeck.forEach(s => draw(g, s));
+    fill(g, PF.tKnob, paperStyle(g));
+    draw(g, PF.tKnob);
+    g.restore();
+  }
+}
+
+/* 샷잔 · 에스프레소 · 붓기 */
+function shotPose(t) {
+  const [w0, w1] = SCENE.shotWalk, [q0, q1] = SCENE.pour;
+  if (t < w0) return { x: PLACE.shotGlass.x, y: PLACE.shotGlass.y + SG.h / 2, rot: 0, walk: false };
+  if (t < w1) {
+    const s = seg(t, w0, w1), f = E.inOutSine(s), p = ROUTE.walk.at(f);
+    const hop = -13 * Math.abs(Math.sin(s * Math.PI * 5)) * (1 - s * 0.6);
+    return { x: p.x, y: p.y + hop, rot: 0.2 * Math.sin(s * TAU * 2.5) * (1 - Math.pow(s, 3)), walk: true, f };
+  }
+  const rest = ROUTE.walk.at(1);
+  if (t < q0 || t > q1) return { x: rest.x, y: rest.y, rot: 0, walk: false };
+  // 붓기: 중심(C)을 옮기고 기울인다
+  const cx = track(t, [[q0, rest.x], [q0 + 0.27, 480], [q0 + 0.47, 519], [q1 - 0.4, 519], [q1 - 0.17, 480], [q1, rest.x]]);
+  const cy = track(t, [[q0, rest.y - SG.h / 2], [q0 + 0.27, 3560], [q0 + 0.47, 3530], [q1 - 0.4, 3530], [q1 - 0.17, 3560], [q1, rest.y - SG.h / 2]]);
+  const rot = track(t, [[q0, 0], [q0 + 0.2, 0.3], [q0 + 0.47, 1.95], [q1 - 0.4, 1.95], [q1 - 0.17, 0.25], [q1, 0]]) + 0.03 * Math.sin(t * 17) * seg(t, q0 + 0.47, q0 + 0.6) * (1 - seg(t, q1 - 0.45, q1 - 0.4));
+  return { cx, cy, rot, pour: true };
+}
+function shotXform(g, P) {              // 원점 = 샷잔 바닥 가운데
+  if (P.pour) { g.translate(P.cx, P.cy); g.rotate(P.rot); g.translate(0, SG.h / 2); }
+  else { g.translate(P.x, P.y); g.rotate(P.rot); }
+}
+function drawShotGlass(g, t) {
+  const [a, b] = SCENE.shotGlassDraw;
+  const [e0, e1] = SCENE.extract;
+  const [q0, q1] = SCENE.pour;
+  const P = shotPose(t);
+  // 트레이 (머신 아래)
+  if (t >= a) {
+    draw(g, SG.tray, pr(t, a, a + 0.14));
+    SG.grate.forEach((s, k) => draw(g, s, pr(t, a + 0.08 + k * 0.02, a + 0.14 + k * 0.02)));
+  }
+  if (t < a) return;
+  // 에스프레소 두 줄기
+  const pfy = portafilterY(t);
+  const level = espressoLevel(t);
+  const surfY = PLACE.shotGlass.y + SG.h / 2 - 9 - level;
+  if (t >= e0 && t < e1 && !P.walk) {
+    const head = lerp(pfy + 61, surfY, E.inQuad(seg(t, e0, e0 + 0.12)));
+    const tail = lerp(pfy + 61, surfY, E.inQuad(seg(t, e1 - 0.2, e1 - 0.06)));
+    if (head > tail + 1) {
+      for (const sx of [-14, 14]) {
+        const pts = [];
+        for (let i = 0; i <= 10; i++) {
+          const y = lerp(tail, head, i / 10);
+          pts.push([PLACE.shotGlass.x + sx + 1.6 * Math.sin(y / 11 - t * 22 + sx), y]);
+        }
+        live(g, pts, { color: COLOR.espresso, width: 5, seed: 1500 + sx, jitter: 0.8, spacing: 6 });
+      }
+    }
+  }
+  // 똑똑 떨어지는 방울
+  [0, 1, 2].forEach(k => {
+    const td = e1 - 0.05 + k * 0.1, s = seg(t, td, td + 0.1);
+    if (s <= 0 || s >= 1 || t >= SCENE.shotWalk[0]) return;
+    const x = PLACE.shotGlass.x + (k % 2 ? 14 : -14), y = lerp(pfy + 63, surfY, s * s);
+    live(g, teardropPts(4, 10).map(([u, v]) => [x + u, y + v]), { closed: true, fill: COLOR.espresso, width: 2.4, seed: 1510 + k, jitter: 0.5 });
+  });
+  g.save();
+  shotXform(g, P);
+  const dp = k => pr(t, a + k * 0.06, a + 0.14 + k * 0.06);
+  // 안의 커피
+  const pourDrain = seg(t, q0 + 0.5, q1 - 0.45);
+  if (!P.pour || P.rot < 0.45) {
+    const lv = t >= q1 ? 0 : level * (1 - pourDrain);
+    if (lv > 0.5) {
+      const yt = -9 - lv, cr = Math.min(9, 2 + lv * 0.14);
+      const poly = [[-sgHalfW(yt), yt], [sgHalfW(yt), yt], [sgHalfW(-9), -9], [-sgHalfW(-9), -9]];
+      live(g, poly, { closed: true, fill: COLOR.espresso, stroke: false, seed: 1520, jitter: 0.6 });
+      const crema = [[-sgHalfW(yt), yt], [sgHalfW(yt), yt], [sgHalfW(yt + cr), yt + cr], [-sgHalfW(yt + cr), yt + cr]];
+      live(g, crema, { closed: true, fill: COLOR.crema, stroke: false, seed: 1521, jitter: 0.6 });
+      live(g, ellipsePts(0, yt, sgHalfW(yt), 4, 0, TAU, 20), { closed: true, fill: COLOR.crema, width: 2.4, seed: 1522, jitter: 0.5, color: COLOR.espresso, alpha: 0.9 });
+    }
+  } else if (pourDrain < 1) {
+    // 기울어진 잔: 입구 쪽에 고인 커피만 (화면 기준 수평)
+    g.save();
+    g.beginPath();
+    g.moveTo(-36, -85); g.lineTo(36, -85); g.lineTo(29, -9); g.lineTo(-29, -9); g.closePath();
+    g.clip();
+    const M = g.getTransform();
+    g.setTransform(CAM_M);
+    const lip = new DOMPoint(37, -86).matrixTransform(CAM_INV.multiply(M));
+    const cy = lip.y - lerp(34, -4, pourDrain);
+    g.fillStyle = COLOR.espresso;
+    g.fillRect(lip.x - 200, cy, 400, 300);
+    g.setTransform(M);
+    g.restore();
+  }
+  // 잔
+  if (t >= q1 && t < q1 + 30) {
+    live(g, [[-26, -9], [-10, -11], [10, -10], [26, -9]], { color: COLOR.crema, width: 3, seed: 1530, jitter: 0.6, overlay: false });
+  }
+  SG.walls.forEach(s => draw(g, s, dp(0)));
+  draw(g, SG.bottom, dp(1));
+  draw(g, SG.rim, dp(1.5));
+  draw(g, SG.inner, dp(2.5));
+  draw(g, SG.hl, dp(3), { alpha: 0.5 });
+  g.restore();
+  // 붓는 커피 줄기 (곡선)
+  if (P.pour) {
+    const sStart = q0 + 0.45, sEnd = q1 - 0.42;
+    if (t > sStart && t < sEnd + 0.14) {
+      const M = new DOMMatrix().translate(P.cx, P.cy).rotate((P.rot * 180) / Math.PI).translate(0, SG.h / 2);
+      const lip = new DOMPoint(37, -86).matrixTransform(M);
+      const surf = waterSurface(t) ?? GL.floor;
+      const end = [580, surf - 2];
+      const head = E.inQuad(seg(t, sStart, sStart + 0.12)), tail = E.inQuad(seg(t, sEnd, sEnd + 0.14));
+      const pts = [];
+      for (let i = 0; i <= 16; i++) {
+        const u = lerp(tail, head, i / 16);
+        const c1 = [lip.x + 26 + 3 * Math.sin(t * 19), lip.y + 40];
+        const x = (1 - u) * (1 - u) * lip.x + 2 * (1 - u) * u * c1[0] + u * u * end[0];
+        const y = (1 - u) * (1 - u) * lip.y + 2 * (1 - u) * u * c1[1] + u * u * end[1];
+        pts.push([x + 1.2 * Math.sin(u * 14 - t * 30), y]);
+      }
+      live(g, pts, { color: COLOR.coffee, width: 8, seed: 1540, jitter: 0.8, spacing: 6 });
+    }
+  }
+}
+
+/* 큰 유리잔 · 얼음 · 찬물 · 커피 · 빨대 · 물방울 · 반짝이 */
+function drawGlass(g, t) {
+  const [a] = SCENE.glassDraw;
+  if (t < a) return;
+  const cx = PLACE.glass.x;
+  draw(g, GL.rimBack, pr(t, a, a + 0.12));
+  const surf = waterSurface(t), ct = coffeeTop(t);
+  const ices = iceAll(t);
+  // 물 · 커피 (얼음보다 먼저 그려 뒤쪽에 둔다)
+  const [, w1] = SCENE.water;
+  const amp = t < w1 ? 3 : 3 * Math.exp(-(t - w1) / 0.5) + 0.8;
+  const wave = x => amp * Math.sin(x * 0.045 - t * 9);
+  let backArc = null;
+  if (surf !== null) {
+    const hw = (GL.right(surf) - GL.left(surf)) / 2;
+    backArc = ellipsePts(cx, surf, hw, 11, Math.PI, TAU, 28).map(([x, y]) => [x, y + wave(x)]);
+    g.save();
+    clipInterior(g);
+    live(g, [...backArc, [GL.right(surf) + 4, GL.floor + 20], [GL.left(surf) - 4, GL.floor + 20]], { closed: true, fill: COLOR.water, stroke: false, seed: 1600, jitter: 0.6 });
+    if (ct !== null) {
+      const cw = x => 4 * Math.sin(x * 0.05 + t * 6) + 3 * Math.sin(x * 0.11 - t * 4);
+      if (ct > surf + 2) {                       // 섞여 드는 경계는 부드럽게
+        const y0 = Math.max(ct - 46, surf);
+        const grad = g.createLinearGradient(0, ct - 46, 0, ct + 6);
+        grad.addColorStop(0, 'rgba(74, 42, 23, 0)');
+        grad.addColorStop(1, 'rgba(74, 42, 23, 0.5)');
+        g.fillStyle = grad;
+        g.fillRect(cx - 170, y0, 340, ct + 6 - y0);
+      }
+      const cb = [];
+      for (let x = GL.left(surf) - 6; x <= GL.right(surf) + 6; x += 10) cb.push([x, Math.max(ct + cw(x), surf + wave(x))]);
+      live(g, [...cb, [GL.right(surf) + 6, GL.floor + 20], [GL.left(surf) - 6, GL.floor + 20]], { closed: true, fill: COLOR.coffee, fillAlpha: 0.9, stroke: false, seed: 1602, jitter: 0.8 });
+      const topMix = clamp((surf + 26 - ct) / 26);
+      if (topMix > 0) live(g, [...backArc, [GL.right(surf), surf]], { closed: true, fill: COLOR.coffee, fillAlpha: 0.9 * topMix, stroke: false, seed: 1603, jitter: 0.6 });
+    }
+    g.restore();
+  }
+  // 빨대
+  const sp = strawPose(t);
+  if (sp) {
+    g.save();
+    g.translate(sp.x, sp.y);
+    g.rotate(sp.rot);
+    fill(g, STRAW.outline, paperStyle(g));
+    STRAW.stripes.forEach(s => draw(g, s));
+    STRAW.ridges.forEach(s => draw(g, s));
+    draw(g, STRAW.outline);
+    g.restore();
+  }
+  // 얼음
+  ices.forEach((q, k) => {
+    if (!q) return;
+    const I = ICE_STROKES[k];
+    g.save();
+    g.translate(q.x, q.y);
+    g.rotate(q.rot);
+    g.scale(q.sx, q.sy);
+    fill(g, I.body, COLOR.ice);
+    draw(g, I.body);
+    draw(g, I.glint);
+    draw(g, I.dot);
+    g.restore();
+    const land = SCENE.ice[k] + ICE_FALL;
+    drawSplash(g, q.x, ICE[k].y + 40, t, land, k);
+    drawImpact(g, q.x, ICE[k].y + 42, t, land, { spread: 90, len: 14, color: COLOR.iceEdge });
+  });
+  // 물속에 잠긴 부분(얼음 · 빨대)은 물빛 · 커피빛으로
+  if (surf !== null) {
+    g.save();
+    clipInterior(g);
+    g.beginPath();
+    g.moveTo(GL.left(surf) - 10, GL.floor + 30);
+    for (let x = GL.left(surf) - 10; x <= GL.right(surf) + 10; x += 10) g.lineTo(x, surf + wave(x));
+    g.lineTo(GL.right(surf) + 10, GL.floor + 30);
+    g.closePath();
+    g.clip();
+    g.fillStyle = COLOR.water;
+    g.globalAlpha = 0.5;
+    g.fillRect(cx - 170, surf - 20, 340, 460);
+    if (ct !== null) {
+      g.fillStyle = COLOR.coffee;
+      g.globalAlpha = 0.45;
+      g.fillRect(cx - 170, ct, 340, 460);
+    }
+    g.globalAlpha = 1;
+    g.restore();
+    const hw = (GL.right(surf) - GL.left(surf)) / 2;
+    const front = ellipsePts(cx, surf, hw, 11, 0, Math.PI, 28).map(([x, y]) => [x, y + wave(x)]);
+    live(g, front, { color: COLOR.iceEdge, width: 3, alpha: 0.75, seed: 1610, jitter: 1 });
+    // 소용돌이 선
+    drawSwirl(g, t);
+  }
+  drawWaterStream(g, t);
+  // 잔 앞면
+  const p = k => pr(t, a + 0.06 + k * 0.08, a + 0.22 + k * 0.08);
+  draw(g, GL.rimFront, p(0));
+  GL.walls.forEach((s, k) => draw(g, s, p(1 + k * 0.6)));
+  draw(g, GL.base, p(3));
+  draw(g, GL.inner, p(3.8));
+  GL.hl.forEach((s, k) => draw(g, s, p(4.5 + k * 0.5), { alpha: 0.4 }));
+  // 물방울
+  const [d0] = SCENE.condense;
+  DROPS.forEach(([x, y, r], k) => {
+    const T = d0 + k * 0.05;
+    const s = seg(t, T, T + 0.14);
+    if (s <= 0) return;
+    const sc = E.outBack(s, 2.2), slide = k % 4 === 1 ? 14 * E.inOutSine(seg(t, T + 0.3, T + 1.4)) : 0;
+    g.save();
+    g.translate(x, y + slide);
+    g.scale(sc, sc);
+    live(g, teardropPts(r * 0.8, r * 1.9), { closed: true, fill: COLOR.ice, color: COLOR.iceEdge, width: 3, seed: 1700 + k, jitter: 0.6, spacing: 5 });
+    g.restore();
+  });
+  // 반짝임 선
+  const st5 = TEXT.steps[4].t;
+  SPARKS.forEach((q, k) => {
+    const T = st5 + k * 0.08, s = pr(t, T, T + 0.14);
+    if (s <= 0) return;
+    const pulse = 1 + 0.12 * Math.sin(t * TAU * 1.8 + k * 1.3);
+    g.save();
+    g.translate(q.x, q.y);
+    g.scale(pulse, pulse);
+    if (q.type === 'fan') {
+      for (let i = -1; i <= 1; i++) {
+        const an = q.ang + i * 0.5;
+        live(g, [[Math.cos(an) * 12, Math.sin(an) * 12], [Math.cos(an) * (i ? 40 : 52), Math.sin(an) * (i ? 40 : 52)]], { p: s, width: 4, seed: 1800 + k * 5 + i, jitter: 0.8 });
+      }
+    } else {
+      const R = q.r, pts = [];
+      for (let i = 0; i < 8; i++) { const an = (i / 8) * TAU - Math.PI / 2, rr = i % 2 ? R * 0.28 : R; pts.push([Math.cos(an) * rr, Math.sin(an) * rr]); }
+      live(g, pts, { closed: true, p: s, width: 3.2, seed: 1820 + k, jitter: 0.6, spacing: 5 });
+    }
+    g.restore();
+  });
+}
+function drawSplash(g, x, y, t, t0, k) {
+  const u = t - t0;
+  if (u < 0 || u > 0.4) return;
+  for (let i = 0; i < 6; i++) {
+    const side = i % 2 ? 1 : -1, sp = 60 + 70 * hash(i, k, 3), up = 160 + 120 * hash(i, k, 4);
+    const px = x + side * (30 + 10 * i) + side * sp * u, py = y - 20 + (-up * u + 700 * u * u);
+    const r = 5 * (1 - u / 0.45);
+    live(g, ellipsePts(px, py, r, r * 1.2, 0, TAU, 10), { closed: true, fill: COLOR.ice, color: COLOR.iceEdge, width: 2.2, seed: 1650 + i + k * 7, jitter: 0.4, spacing: 4 });
+  }
+}
+function drawWaterStream(g, t) {
+  const [a, b] = SCENE.water;
+  if (t < a || t > b) return;
+  const x = 588, top = 2860;
+  const surf = waterSurface(t) ?? GL.floor;
+  const head = Math.min(lerp(top, GL.floor, E.inQuad(seg(t, a, a + 0.14))), surf + 4);
+  const tail = lerp(top, surf, E.inQuad(seg(t, b - 0.16, b)));
+  if (head <= tail + 2) return;
+  const L = [], R = [];
+  for (let i = 0; i <= 18; i++) {
+    const y = lerp(tail, head, i / 18), wob = 2.5 * Math.sin(y / 34 - t * 14);
+    const w = 11 + 2 * Math.sin(y / 20 + t * 9);
+    L.push([x - w + wob, y]); R.push([x + w + wob, y]);
+  }
+  live(g, [...L, ...R.slice().reverse()], { closed: true, fill: COLOR.water, stroke: false, seed: 1620, jitter: 0.6 });
+  live(g, L, { color: COLOR.iceEdge, width: 2.6, alpha: 0.7, seed: 1621, jitter: 0.8 });
+  live(g, R, { color: COLOR.iceEdge, width: 2.6, alpha: 0.7, seed: 1622, jitter: 0.8 });
+}
+function drawSwirl(g, t) {
+  const [a, b] = SCENE.pour;
+  const t0 = a + 0.65, fade = 1 - seg(t, b + 0.05, b + 0.45);
+  if (t < t0 || fade <= 0) return;
+  const p = E.outQuad(seg(t, t0, t0 + 0.55));
+  [[626, 3880, 1], [668, 3948, 0.7]].forEach(([x, y, sc], k) => {
+    const pts = [], rot = (t - t0) * 2.2 + k;
+    for (let i = 0; i <= 40; i++) {
+      const u = i / 40, an = rot + u * TAU * 1.6, r = (14 + 64 * u) * sc;
+      pts.push([x + Math.cos(an) * r, y + Math.sin(an) * r * 0.32]);
+    }
+    live(g, pts, { p, color: COLOR.ice, alpha: 0.85 * fade, width: 3.4, seed: 1630 + k, jitter: 1, overlay: false });
+  });
+}
+
+/* 경로선 · 갈색 덧칠 */
+function drawRoutes(g, t) {
+  const h = heroState(t);
+  let pBean = 0;
+  if (t >= SCENE.beanPath[0] - 0.05) pBean = Math.min(1, (h && h.phase === 'path' ? h.f : 1) + 0.08 * seg(t, SCENE.beanPath[0] - 0.05, SCENE.beanPath[0] + 0.05));
+  const [f0] = SCENE.bowlPour;
+  const pPour = pr(t, f0 + 0.05, f0 + 0.05 + 0.66);
+  const [g0] = SCENE.grounds;
+  const pGround = E.outQuad(seg(t, g0 - 0.05, g0 + 0.8));
+  const [w0, w1] = SCENE.shotWalk;
+  const pWalk = t < w0 - 0.05 ? 0 : Math.min(1, E.inOutSine(seg(t, w0, w1)) + 0.08 * seg(t, w0 - 0.05, w0 + 0.05));
+  draw(g, ROUTE.bean.line, pBean);
+  draw(g, ROUTE.pour.line, pPour);
+  draw(g, ROUTE.grounds.line, pGround);
+  draw(g, ROUTE.walk.line, pWalk);
+  // 카메라가 빠지는 동안 지나온 길 전체를 갈색으로 한 번 더
+  const [r0, r1] = SCENE.retrace;
+  if (t >= r0) {
+    const list = [ROUTE.bean, ROUTE.pour, ROUTE.grounds, ROUTE.walk];
+    const total = list.reduce((s, r) => s + r.total, 0);
+    let d = E.inOutSine(seg(t, r0, r1)) * total;
+    for (const r of list) {
+      draw(g, r.brown, clamp(d / r.total), { alpha: 0.85 });
+      d -= r.total;
+      if (d <= 0) break;
+    }
+  }
+}
+
+/* 빨간 체크 · 마무리 */
+function drawChecks(g, t) {
+  const [c0] = SCENE.checks;
+  TEXT.steps.slice(0, 4).forEach((st, i) => {
+    const T = c0 + i * 0.1, p = pr(t, T, T + 0.2);
+    if (p <= 0) return;
+    const L = labelLayout(g, st);
+    g.save();
+    g.translate(L.right + 56, L.cy - 4);
+    draw(g, CHECK, p);
+    g.restore();
+  });
+}
+function drawEnding(g, t) {
+  const e = TEXT.endTitle, s = TEXT.signature;
+  write(g, e.text, e.x, e.y, e.size, e.t, t, { seed: 5 });
+  write(g, s.text, s.x, s.y, s.size, s.t, t, { seed: 6 });
+}
+
+function drawScene(g, t) {
+  drawRoutes(g, t);
+  drawTitle(g, t);
+  drawLabels(g, t);
+  drawBowl(g, t);
+  drawGrinder(g, t);
+  drawGrounds(g, t);
+  drawMachine(g, t);
+  drawPortafilter(g, t);
+  drawGlass(g, t);
+  drawShotGlass(g, t);
+  drawHeroTop(g, t);
+  drawChecks(g, t);
+  drawEnding(g, t);
+}
+
+/* =======================================================================
+   render(t) — t(초) 하나로 한 장면을 통째로 그린다
+   ======================================================================= */
+const canvas = document.getElementById('film');
+const ctx = canvas.getContext('2d');
+let OVERLAY = [], BLUR = null, BLUR_CTX = null;
+
+function drawPaper(g, cam) {
+  const hw = STAGE.w / 2 / cam.z, hh = STAGE.h / 2 / cam.z;
+  const vx0 = cam.x - hw, vx1 = cam.x + hw, vy0 = cam.y - hh, vy1 = cam.y + hh;
+  const edge = vx0 < 60 || vy0 < 60 || vx1 > PAPER.w - 60 || vy1 > PAPER.h - 60;
+  if (edge) {                               // 종이 그림자 (가장자리가 보일 때만)
+    g.strokeStyle = 'rgba(58, 36, 18, 0.07)';
+    for (const w of [10, 22, 38]) { g.lineWidth = w; g.strokeRect(0, 8, PAPER.w, PAPER.h); }
+  }
+  const x0 = Math.max(0, vx0), y0 = Math.max(0, vy0), x1 = Math.min(PAPER.w, vx1), y1 = Math.min(PAPER.h, vy1);
+  if (x1 <= x0 || y1 <= y0) return;
+  g.fillStyle = COLOR.paper;
+  g.fillRect(x0, y0, x1 - x0, y1 - y0);
+  // 모눈: 40칸마다 아주 옅게, 200칸마다 조금 진하게
+  const G = PAPER.grid, M = PAPER.major;
+  g.lineWidth = 1.3;
+  g.strokeStyle = COLOR.gridMinor;
+  g.beginPath();
+  for (let x = Math.ceil(x0 / G) * G; x <= x1; x += G) if (x % M) { g.moveTo(x, y0); g.lineTo(x, y1); }
+  for (let y = Math.ceil(y0 / G) * G; y <= y1; y += G) if (y % M) { g.moveTo(x0, y); g.lineTo(x1, y); }
+  g.stroke();
+  g.lineWidth = 1.8;
+  g.strokeStyle = COLOR.gridMajor;
+  g.beginPath();
+  for (let x = Math.ceil(x0 / M) * M; x <= x1; x += M) { g.moveTo(x, y0); g.lineTo(x, y1); }
+  for (let y = Math.ceil(y0 / M) * M; y <= y1; y += M) { g.moveTo(x0, y); g.lineTo(x1, y); }
+  g.stroke();
+  if (edge) {
+    g.strokeStyle = 'rgba(90, 64, 40, 0.3)';
+    g.lineWidth = 1.5;
+    g.strokeRect(0, 0, PAPER.w, PAPER.h);
+    if (vy0 < 60) {                         // 연습장에서 뜯어낸 구멍
+      for (let x = 44; x < PAPER.w; x += 62) {
+        g.fillStyle = COLOR.desk;
+        g.beginPath(); g.ellipse(x, 24, 8, 8, 0, 0, TAU); g.fill();
+        g.strokeStyle = 'rgba(70, 48, 28, 0.35)';
+        g.lineWidth = 1.2;
+        g.stroke();
+      }
+    }
+  }
+}
+
+// 반씩 밀어 겹치기를 k번 반복하면 2^k개의 고른 샘플로 번진다 (정수 픽셀 이동이라 빠르다)
+function motionBlur(g, mb) {
+  const k = Math.max(1, Math.min(5, Math.ceil(Math.log2(mb.L / 2.5))));
+  const steps = [];
+  for (let i = 1; i <= k; i++) steps.push([(mb.dx * RES) / 2 ** i, (mb.dy * RES) / 2 ** i]);
+  const mx = steps.reduce((a, v) => a + v[0], 0) / 2, my = steps.reduce((a, v) => a + v[1], 0) / 2;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.imageSmoothingEnabled = false;
+  BLUR_CTX.globalCompositeOperation = 'copy';
+  steps.forEach(([sx, sy], i) => {
+    BLUR_CTX.drawImage(canvas, 0, 0);
+    const ox = i ? 0 : -mx, oy = i ? 0 : -my;
+    if (!i) { g.globalAlpha = 1; g.drawImage(BLUR, Math.round(ox), Math.round(oy)); }
+    g.globalAlpha = 0.5;
+    g.drawImage(BLUR, Math.round(ox + sx), Math.round(oy + sy));
+  });
+  g.globalAlpha = 1;
+  g.imageSmoothingEnabled = true;
+}
+
+function render(t) {
+  const D = STAGE.duration;
+  t = ((t % D) + D) % D;
+  FRAME.t = t;
+  FRAME.boil = Math.floor(t * STAGE.boilFps + 1e-6) % 3;
+  const g = ctx, cam = camAt(t), lc = layerCam(cam);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.globalAlpha = 1;
+  g.globalCompositeOperation = 'source-over';
+  g.fillStyle = COLOR.desk;
+  g.fillRect(0, 0, canvas.width, canvas.height);
+  // 종이 뒤 낙서 층 (느린 카메라)
+  applyCam(g, lc);
+  drawDoodles(g, lc, DOODLE.deskAlpha);
+  // 종이
+  applyCam(g, cam);
+  CAM_M = g.getTransform();
+  CAM_INV = CAM_M.inverse();
+  drawPaper(g, cam);
+  g.save();
+  g.beginPath(); g.rect(0, 0, PAPER.w, PAPER.h); g.clip();
+  applyCam(g, lc);
+  drawDoodles(g, lc, DOODLE.paperAlpha);      // 종이 너머로 비치는 낙서
+  g.restore();
+  applyCam(g, cam);
+  drawScene(g, t);
+  // 휙 넘어갈 때만 모션 블러
+  const mb = blurFor(t);
+  if (mb) motionBlur(g, mb);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.drawImage(OVERLAY[FRAME.boil], 0, 0);
+}
+
+/* =======================================================================
+   준비 · 재생기
+   ======================================================================= */
+// 캔버스 픽셀 수를 화면에 보이는 크기에 맞춘다 (최대 1080×1920). 주소 끝에 ?full 을 붙이면 항상 1080×1920
+const FORCE_FULL = /[?&]full\b/.test(location.search);
+function setResolution(bw) {
+  bw = Math.round(clamp(bw, 180, STAGE.w) / 9) * 9;       // 9의 배수면 16:9가 딱 떨어진다
+  const bh = (bw / 9) * 16;
+  if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh; }
+  RES = bw / STAGE.w;
+  OVERLAY = [0, 1, 2].map(k => makeOverlay(k, bw, bh));
+  BLUR.width = bw; BLUR.height = bh;
+}
+function build() {
+  PAPER_PATTERN = makePaperPattern(ctx);
+  BLUR = document.createElement('canvas');
+  BLUR_CTX = BLUR.getContext('2d');
+  setResolution(canvas.width);
+  buildRoutes();
+  buildBowl();
+  buildFlights();
+  buildGrinder();
+  buildGrounds();
+  buildPortafilter();
+  buildMachine();
+  buildShotGlass();
+  buildGlass();
+  buildIce();
+  buildStraw();
+  buildLabels();
+  buildDoodles();
+}
+build();
+
+const player = { playing: true, t: 0, last: null, dragging: false };
+let booted = false;
+const scrub = document.getElementById('scrub');
+const clock = document.getElementById('clock');
+const playBtn = document.getElementById('playBtn');
+const bar = document.getElementById('bar');
+function paint() {
+  render(player.t);
+  scrub.value = player.t.toFixed(2);
+  clock.textContent = `${player.t.toFixed(2)} / ${STAGE.duration.toFixed(2)}`;
+}
+function setPlaying(on) {
+  player.playing = on;
+  player.last = null;
+  document.getElementById('icoPause').style.display = on ? '' : 'none';
+  document.getElementById('icoPlay').style.display = on ? 'none' : '';
+  playBtn.setAttribute('aria-label', on ? '일시정지' : '재생');
+}
+function seek(t) {
+  player.t = clamp(t, 0, STAGE.duration - 1e-3);
+  paint();
+}
+function tick(now) {
+  if (player.playing && !player.dragging) {
+    if (player.last !== null) player.t = (player.t + Math.min(0.1, (now - player.last) / 1000)) % STAGE.duration;
+    player.last = now;
+    paint();
+  }
+  requestAnimationFrame(tick);
+}
+playBtn.addEventListener('click', () => setPlaying(!player.playing));
+scrub.addEventListener('pointerdown', () => { player.dragging = true; });
+scrub.addEventListener('input', () => { player.dragging = true; seek(parseFloat(scrub.value)); });
+const endDrag = () => { if (player.dragging) { player.dragging = false; player.last = null; } };
+scrub.addEventListener('pointerup', endDrag);
+scrub.addEventListener('change', endDrag);
+window.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); setPlaying(!player.playing); }
+  else if (e.code === 'ArrowRight' || e.code === 'ArrowLeft') {
+    e.preventDefault();
+    setPlaying(false);
+    seek(player.t + (e.code === 'ArrowRight' ? 1 : -1) * (e.shiftKey ? 1 : 1 / STAGE.boilFps));
+  }
+});
+function layout() {
+  const pad = 16, gap = 12;
+  const availW = window.innerWidth - pad * 2;
+  const availH = window.innerHeight - pad * 2 - bar.offsetHeight - gap;
+  const s = Math.max(0.05, Math.min(availW / STAGE.w, availH / STAGE.h));
+  canvas.style.width = `${Math.floor(STAGE.w * s)}px`;
+  canvas.style.height = `${Math.floor(STAGE.h * s)}px`;
+  bar.style.width = `${Math.max(Math.floor(STAGE.w * s), Math.min(availW, 280))}px`;
+  const want = FORCE_FULL ? STAGE.w : Math.round(STAGE.w * s * (window.devicePixelRatio || 1));
+  if (Math.abs(Math.min(want, STAGE.w) - canvas.width) > 2) { setResolution(want); if (booted) paint(); }
+}
+window.addEventListener('resize', layout);
+layout();
+
+// 밖에서도 쓸 수 있게
+window.render = render;
+window.player = { play: () => setPlaying(true), pause: () => setPlaying(false), seek, get t() { return player.t; } };
+
+/* ───────── 글꼴 ─────────
+   Gaegu Bold (SIL Open Font License 1.1, © The Gaegu Project Authors)
+   화면에 쓰는 글자만 담은 작은 사본을 넣어 두어서, 인터넷이 막힌 미리보기에서도 같은 손글씨가 나온다.
+   문구를 바꿔 새 글자가 생기면 <head>의 구글 폰트 링크가 나머지 글자를 채운다. */
+const GAEGU_WOFF2 = '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';
+(function boot() {
+  let ready = Promise.resolve();
+  if (window.FontFace && document.fonts) {
+    try {
+      const face = new FontFace('GaeguEmbed', `url(data:font/woff2;base64,${GAEGU_WOFF2})`, { weight: '700' });
+      document.fonts.add(face);
+      ready = Promise.race([face.load(), new Promise(r => setTimeout(r, 1500))]);
+    } catch (e) { /* 글꼴이 없어도 재생은 된다 */ }
+    // 구글 폰트 글자가 늦게 도착해도 글자 폭을 다시 잰다
+    document.fonts.addEventListener('loadingdone', () => { FONT_EPOCH++; widthCache.clear(); if (!player.playing) paint(); });
+  }
+  ready.catch(() => {}).then(() => {
+    booted = true;
+    FONT_EPOCH++;
+    widthCache.clear();
+    paint();
+    requestAnimationFrame(tick);
+  });
+})();
+</script>
+</body>
+</html>
