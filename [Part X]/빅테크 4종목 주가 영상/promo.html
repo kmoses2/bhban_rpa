@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>INTC · DELL · NVDA · TSLA — 30s</title>
+<style>
+@font-face { font-family: "Manrope"; font-weight: 500; src: url("node_modules/@fontsource/manrope/files/manrope-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Manrope"; font-weight: 600; src: url("node_modules/@fontsource/manrope/files/manrope-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Manrope"; font-weight: 700; src: url("node_modules/@fontsource/manrope/files/manrope-latin-700-normal.woff2") format("woff2"); }
+@font-face { font-family: "Manrope"; font-weight: 800; src: url("node_modules/@fontsource/manrope/files/manrope-latin-800-normal.woff2") format("woff2"); }
+@font-face { font-family: "Intel One Mono"; font-weight: 500; src: url("node_modules/@fontsource/intel-one-mono/files/intel-one-mono-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Intel One Mono"; font-weight: 600; src: url("node_modules/@fontsource/intel-one-mono/files/intel-one-mono-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Intel One Mono"; font-weight: 700; src: url("node_modules/@fontsource/intel-one-mono/files/intel-one-mono-latin-700-normal.woff2") format("woff2"); }
+
+/* 차트 색(검증 통과: 어두운 배경 #050b1f, 전체 쌍 CVD ΔE ≥ 12, 일반 시각 ΔE ≥ 17.9) */
+:root {
+  --bg: #050b1f; --text: #eef4ff; --dim: #8ea2c8; --faint: #52628a; --grid: rgba(142,162,200,0.16); --grid-strong: rgba(190,210,245,0.5);
+  --tsla: #cc0000; --intc: #18a2cd; --nvda: #6ba808; --dell: #5b64ee;
+  --ui: "Manrope", system-ui, sans-serif; --mono: "Intel One Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+body { font-family: var(--ui); color: var(--text); -webkit-font-smoothing: antialiased; }
+#stage { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
+
+#bg { position: absolute; inset: -80px; }
+#bg .base { position: absolute; inset: 0; background: radial-gradient(1500px 1000px at 50% 42%, #0a1a4a 0%, #050d2c 50%, #02050f 100%); }
+#bg .tint { position: absolute; inset: 0; opacity: 0; }
+#bg .grid { position: absolute; inset: 0; opacity: 0.5;
+  background-image: radial-gradient(rgba(160,185,230,0.15) 1.4px, transparent 1.8px); background-size: 40px 40px;
+  -webkit-mask-image: radial-gradient(1100px 720px at 50% 50%, #000 15%, transparent 80%); }
+
+#cam { position: absolute; inset: 0; }
+#rig { position: absolute; inset: 0; }
+.scene { position: absolute; inset: 0; visibility: hidden; }
+.line { display: block; overflow: hidden; padding: 0.04em 0.02em 0.14em; margin-bottom: -0.12em; }
+.line > span { display: inline-block; }
+.mono { font-family: var(--mono); }
+.kicker { font-family: var(--mono); font-size: 24px; font-weight: 600; letter-spacing: 0.14em; color: var(--dim); text-transform: uppercase; }
+
+/* ---------- 인트로 ---------- */
+.lcard { position: absolute; top: 400px; width: 380px; height: 290px; border-radius: 22px; overflow: hidden;
+  background: linear-gradient(160deg, rgba(255,255,255,0.07), rgba(255,255,255,0.02)); box-shadow: 0 40px 90px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.09); }
+.lcard .logo { position: absolute; left: 0; right: 0; top: 48px; height: 132px; display: flex; align-items: center; justify-content: center; }
+.lcard .logo svg { height: 100%; width: auto; overflow: visible; }
+.lcard .tk { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font-family: var(--mono); font-size: 26px; font-weight: 700; letter-spacing: 0.18em; }
+.lcard .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; }
+#introTitle { position: absolute; left: 0; right: 0; top: 150px; text-align: center; font-size: 120px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; white-space: nowrap; }
+#introTitle .arrow { color: var(--dim); font-weight: 600; margin: 0 0.18em; }
+#introSub { position: absolute; left: 0; right: 0; top: 300px; text-align: center; font-family: var(--mono); font-size: 30px; font-weight: 600; letter-spacing: 0.16em; color: var(--dim); }
+
+/* ---------- 종목 구간 ---------- */
+.seg .head { position: absolute; left: 110px; top: 92px; display: flex; align-items: center; gap: 28px; }
+.seg .head .logo svg { display: block; height: 96px; width: auto; overflow: visible; }
+.seg .head .name { font-size: 72px; font-weight: 800; letter-spacing: -0.035em; line-height: 1; }
+.seg .head .chip { display: inline-block; margin-top: 12px; font-family: var(--mono); font-size: 24px; font-weight: 700; letter-spacing: 0.14em; color: var(--dim); }
+.seg .head .chip i { display: inline-block; width: 26px; height: 6px; border-radius: 3px; margin-right: 12px; vertical-align: 6px; }
+.seg .hero { position: absolute; right: 110px; top: 70px; text-align: right; }
+.seg .hero .pct { font-size: 190px; font-weight: 800; letter-spacing: -0.05em; line-height: 1; }
+.seg .hero .since { margin-top: 4px; font-family: var(--mono); font-size: 26px; font-weight: 600; letter-spacing: 0.08em; color: var(--dim); }
+.seg .hero .fromto { margin-top: 6px; font-family: var(--mono); font-size: 32px; font-weight: 700; color: var(--text); }
+.chart { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: visible; }
+.chart text { font-family: var(--mono); }
+.plabel { position: absolute; font-family: var(--mono); font-size: 30px; font-weight: 700; color: var(--text); white-space: nowrap; text-shadow: 0 2px 10px rgba(5,11,31,0.9); }
+.plabel small { display: block; font-size: 20px; font-weight: 600; letter-spacing: 0.08em; color: var(--dim); }
+.penlab { position: absolute; font-family: var(--mono); font-size: 30px; font-weight: 700; color: var(--text); white-space: nowrap; padding: 0 10px; border-radius: 8px; background: rgba(5,11,31,0.62); }
+.wipe { position: absolute; top: -60px; bottom: -60px; width: 220px; margin-left: -110px; transform: skewX(-14deg); visibility: hidden; }
+
+/* ---------- 레이스 ---------- */
+#raceHead { position: absolute; left: 110px; top: 70px; }
+#raceDate { font-size: 84px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.05; }
+.row { position: absolute; left: 1540px; width: 340px; height: 104px; border-radius: 14px; background: #0e1834; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08), 0 10px 26px rgba(0,0,0,0.45); }
+.row .rk { position: absolute; left: 18px; top: 26px; font-family: var(--mono); font-size: 40px; font-weight: 700; color: var(--dim); }
+.row .chipc { position: absolute; left: 70px; top: 22px; width: 96px; height: 60px; border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+.row .chipc svg { height: 34px; width: auto; }
+.row .tk { position: absolute; left: 184px; top: 16px; font-family: var(--mono); font-size: 24px; font-weight: 700; letter-spacing: 0.12em; color: var(--dim); }
+.row .v { position: absolute; left: 184px; top: 46px; font-family: var(--mono); font-size: 38px; font-weight: 700; }
+.headchip { position: absolute; width: 92px; height: 56px; margin: -28px 0 0 14px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45), 0 0 0 3px var(--bg); }
+.headchip svg { height: 32px; width: auto; }
+.callout { position: absolute; font-family: var(--mono); font-size: 22px; font-weight: 700; letter-spacing: 0.08em; color: var(--text); white-space: nowrap;
+  padding: 8px 14px; border-radius: 8px; background: rgba(5,11,31,0.82); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14); }
+
+/* ---------- 최종 순위 ---------- */
+#finalHead { position: absolute; left: 0; right: 0; top: 96px; text-align: center; }
+#finalTitle { font-size: 92px; font-weight: 800; letter-spacing: -0.035em; line-height: 1.05; }
+.frow { position: absolute; left: 150px; width: 1620px; height: 150px; }
+.frow .rk { position: absolute; left: 0; top: 38px; font-family: var(--mono); font-size: 64px; font-weight: 700; color: var(--dim); }
+.frow .chipc { position: absolute; left: 96px; top: 30px; width: 150px; height: 90px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+.frow .chipc svg { height: 50px; width: auto; }
+.frow .nm { position: absolute; left: 280px; top: 30px; font-size: 44px; font-weight: 800; letter-spacing: -0.02em; }
+.frow .ft { position: absolute; left: 280px; top: 88px; font-family: var(--mono); font-size: 24px; font-weight: 600; color: var(--dim); letter-spacing: 0.04em; }
+.frow .bar { position: absolute; top: 52px; height: 44px; border-radius: 6px; transform-origin: left center; }
+.frow .val { position: absolute; top: 44px; font-family: var(--mono); font-size: 52px; font-weight: 700; white-space: nowrap; }
+#zeroLine { position: absolute; top: 250px; height: 640px; width: 3px; background: var(--grid-strong); }
+#footer { position: absolute; left: 0; right: 0; bottom: 40px; text-align: center; font-family: var(--mono); font-size: 19px; color: var(--faint); letter-spacing: 0.04em; }
+
+#flash { position: absolute; inset: 0; background: radial-gradient(1200px 800px at 50% 50%, rgba(235,245,255,1), rgba(160,190,255,0.5) 60%, rgba(80,110,200,0.2));
+  mix-blend-mode: screen; opacity: 0; pointer-events: none; }
+#black { position: absolute; inset: 0; background: #01030a; opacity: 0; pointer-events: none; }
+#grain { position: absolute; inset: -128px; background: url("assets/grain.png"); background-size: 256px 256px; opacity: 0.07; mix-blend-mode: overlay; pointer-events: none; }
+#vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(1500px 950px at 50% 50%, transparent 55%, rgba(0,0,0,0.6) 100%); }
+#note { position: absolute; right: 60px; bottom: 30px; font-family: var(--mono); font-size: 17px; color: var(--faint); letter-spacing: 0.04em; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bg"><div class="base"></div><div class="tint"></div><div class="grid"></div></div>
+  <div id="cam"><div id="rig">
+    <section class="scene" id="intro">
+      <div id="introTitle"><span class="line"><span>JAN 2025<span class="arrow">→</span>SEP 2026</span></span></div>
+      <div id="introSub">4 TECH STOCKS · 21 MONTHS · CLOSING PRICES</div>
+    </section>
+    <!-- 종목 구간 4개, 레이스, 최종 순위는 promo.js 가 데이터로 만듭니다 -->
+  </div></div>
+  <div id="flash"></div>
+  <div id="black"></div>
+  <div id="grain"></div>
+  <div id="vignette"></div>
+  <div id="note">Dots = verified closing prices; lines connect them. Sources in README. Not investment advice.</div>
+</div>
+<script src="node_modules/gsap/dist/gsap.min.js"></script>
+<script src="promo.js"></script>
+</body>
+</html>
